@@ -5,10 +5,11 @@ from rest_framework.permissions import BasePermission , IsAuthenticated
 from rest_framework.authentication import TokenAuthentication 
 from rest_framework.authtoken.models import Token
 from django.contrib.auth import get_user_model
-from django_filters.rest_framework import DjangoFilterBackend
-from .serializers import UserSerializer , EventSerializer
+from django_filters.rest_framework import DjangoFilterBackend, FilterSet, DateFilter, CharFilter, NumberFilter
+from .serializers import UserSerializer , EventSerializer , PhotoSerializer
 import hashlib
 from users.models import users
+from photos.models import Photo
 from events.models import Events
 
 # Use your actual users model
@@ -460,4 +461,41 @@ class EventViewSet(viewsets.ModelViewSet):
 
     """
 
+class PhotoFilter(FilterSet):
+    # filter by uploader user id: ?uploader=3
+    uploader = NumberFilter(field_name="uploadedBy__id", lookup_expr="exact")
+    # single tag: ?tag=fun
+    tag = CharFilter(method="filter_by_tag")
+    # exact date (date portion of uploadDate): ?date=2025-12-01
+    date = DateFilter(field_name="uploadDate", lookup_expr="date")
+    # range: ?date_after=YYYY-MM-DD & ?date_before=YYYY-MM-DD
+    date_after = DateFilter(field_name="uploadDate", lookup_expr="date__gte")
+    date_before = DateFilter(field_name="uploadDate", lookup_expr="date__lte")
 
+    class Meta:
+        model = Photo
+        fields = []  # custom filters only
+
+    def filter_by_tag(self, queryset, name, value):
+        # Assumes extractedTags is a JSONField storing a list of strings.
+        # PostgreSQL: list contains exact value
+        # Django will translate extractedTags__contains=[value] to JSON containment
+        return queryset.filter(extractedTags__contains=[value])
+
+class PhotoViewSet(viewsets.ModelViewSet):
+    """
+    Photo viewset with combined filtering:
+      - uploader (user id)
+      - tag (single tag)
+      - date / date_after / date_before
+    Example: /api/photos/?uploader=3&tag=fun&date_after=2025-11-01
+    """
+    queryset = Photo.objects.all().select_related('event', 'uploadedBy')
+    serializer_class = PhotoSerializer
+
+    filter_backends = [DjangoFilterBackend, filters.SearchFilter, filters.OrderingFilter]
+    filterset_class = PhotoFilter
+
+    search_fields = ["photoDesc", "event__eventname", "uploadedBy__username"]
+    ordering_fields = ["uploadDate", "photoid"]
+    ordering = ["-uploadDate"]

@@ -1,6 +1,7 @@
 from rest_framework import serializers
 from users.models import users
 from events.models import Events
+from photos.models import Photo
 import hashlib
 
 
@@ -73,3 +74,9 @@ class EventSerializer(serializers.ModelSerializer):
             return obj.eventCoverPhoto.url
         return None
 
+class PhotoSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Photo
+        fields = '__all__'
+        read_only_fields = ('photoid', 'uploadDate')
+    

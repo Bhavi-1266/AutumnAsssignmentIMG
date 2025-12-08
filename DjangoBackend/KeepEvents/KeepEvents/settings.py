@@ -41,7 +41,8 @@ INSTALLED_APPS = [
     "django_filters",
     "users",
     "api",
-    "events",   
+    "events",  
+    "photos", 
 ]
 
 MIDDLEWARE = [
@@ -77,12 +78,24 @@ WSGI_APPLICATION = "KeepEvents.wsgi.application"
 # Database
 # https://docs.djangoproject.com/en/6.0/ref/settings/#databases
 
-DATABASES = {
-    "default": {
-        "ENGINE": "django.db.backends.sqlite3",
-        "NAME": BASE_DIR / "db.sqlite3",
-    }
+# DATABASES = {
+#     "default": {
+#         "ENGINE": "django.db.backends.sqlite3",
+#         "NAME": BASE_DIR / "db.sqlite3",
+#     }
+# }
+
+DATABASES={
+'default':{
+'ENGINE':'django.db.backends.postgresql_psycopg2',
+'NAME':'AutumnAssDjango',
+'USER': 'postgres',
+'PASSWORD': 'Bhavy@1266',
+'HOST':'localhost',
+'PORT':'5433',
 }
+}
+
 
 
 # Password validation
