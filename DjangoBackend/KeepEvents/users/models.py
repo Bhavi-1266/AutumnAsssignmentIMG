@@ -11,7 +11,7 @@ class users(AbstractUser):
     batch = models.IntegerField(blank=True, null=True)
     dept = models.CharField(max_length=100, blank=True)
     password = models.CharField(max_length=128)  # Store hashed passwords
-    roles = models.JSONField(default=list, blank=True)  # List of roles/permissions
+    # roles = models.JSONField(default=list, blank=True)  # List of roles/permissions
     date_joined = models.DateTimeField(auto_now_add=True)
     is_active = models.BooleanField(default=True)
     
