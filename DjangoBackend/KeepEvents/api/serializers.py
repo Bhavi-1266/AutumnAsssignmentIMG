@@ -1,7 +1,7 @@
 from rest_framework import serializers
 from users.models import users
 from events.models import Events
-from photos.models import Photo
+from photos.models import Photo , likedPhoto , comment , downloadedPhoto , viewedPhoto
 import hashlib
 
 
@@ -80,3 +80,24 @@ class PhotoSerializer(serializers.ModelSerializer):
         fields = '__all__'
         read_only_fields = ('photoid', 'uploadDate')
     
+
+class likedPhotoSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = likedPhoto
+        fields = '__all__'
+
+class commentSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = comment
+        fields = '__all__'
+
+class downloadedPhotoSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = downloadedPhoto
+        fields = '__all__'
+
+class viewedPhotoSerializer(serializers.ModelSerializer):
+
+    class Meta:
+        model = viewedPhoto
+        fields = '__all__'
