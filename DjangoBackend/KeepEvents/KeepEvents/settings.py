@@ -162,8 +162,17 @@ ACCOUNT_EMAIL_VERIFICATION = "none"   # will handle our own OTP
 ACCOUNT_AUTHENTICATION_METHOD = "email"
 ACCOUNT_EMAIL_REQUIRED = True
 
-EMAIL_BACKEND = "django.core.mail.backends.console.EmailBackend"
-DEFAULT_FROM_EMAIL = "no-reply@keepevents.local"
+# EMAIL_BACKEND = "django.core.mail.backends.console.EmailBackend"
+# DEFAULT_FROM_EMAIL = "no-reply@keepevents.local"
+
+EMAIL_BACKEND = "django.core.mail.backends.smtp.EmailBackend"
+EMAIL_HOST = "smtp.gmail.com"
+EMAIL_PORT = 587
+EMAIL_USE_TLS = True
+EMAIL_HOST_USER = "4038bhavy@gmail.com"      # YOUR Gmail
+EMAIL_HOST_PASSWORD = "xsla yojd funr wsso"    
+DEFAULT_FROM_EMAIL = "your_email@gmail.com"
+
 
 SOCIALACCOUNT_PROVIDERS = {
     "google": {
