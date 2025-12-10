@@ -1,24 +1,52 @@
-from django.contrib import admin
-from django.utils.html import mark_safe
-from .models import users
+# accounts/admin.py (or wherever your user admin is)
 
-@admin.register(users)
-class UsersAdmin(admin.ModelAdmin):
-    list_display = ('username', 'email', 'dept', 'batch', 'thumbnail', 'is_active')
+from django.contrib import admin
+from django.contrib.auth.admin import UserAdmin
+from django.contrib.auth import get_user_model
+from django.utils.safestring import mark_safe
+
+User = get_user_model()
+
+@admin.register(User)   # use your actual model class, not `users` string
+class UsersAdmin(UserAdmin):
+    list_display = ('userid','username', 'email', 'dept', 'batch', 'thumbnail', 'is_active')
     readonly_fields = ('date_joined', 'thumbnail')
 
     fieldsets = (
         (None, {'fields': ('username', 'password')}),
         ('Personal', {'fields': ('email', 'userProfile', 'thumbnail', 'userbio', 'enrollmentNo')}),
         ('Academic', {'fields': ('dept', 'batch')}),
-        ('Permissions', {'fields': ('is_active',)}),
-        ('Dates', {'fields': ('date_joined',)}),
+        # IMPORTANT: include groups & permissions here
+        ('Permissions', {
+            'fields': (
+                'is_active',
+                'is_staff',
+                'is_superuser',
+                'groups',
+                'user_permissions',
+            )
+        }),
+        ('Dates', {'fields': ('date_joined', 'last_login')}),
     )
 
     add_fieldsets = (
         (None, {
             'classes': ('wide',),
-            'fields': ('username','email','password','userProfile','userbio','dept','batch','enrollmentNo'),
+            'fields': (
+                'userid',
+                'username',
+                'email',
+                'password1', 'password2',  # use password1/password2 for add form
+                'userProfile',
+                'userbio',
+                'dept',
+                'batch',
+                'enrollmentNo',
+                'is_staff',
+                'is_superuser',
+                'is_active',
+                'groups',
+            ),
         }),
     )
 

@@ -3,7 +3,13 @@ from users.models import users
 from events.models import Events
 from photos.models import Photo , likedPhoto , comment , downloadedPhoto , viewedPhoto
 import hashlib
+from django.contrib.auth.hashers import make_password
+from rest_framework import serializers
+from django.contrib.auth import get_user_model
+from django.contrib.auth.models import Group
+from api.utils import create_and_send_email_otp
 
+User = get_user_model()
 
 class UserSerializer(serializers.ModelSerializer):
     class Meta:
@@ -14,34 +20,44 @@ class UserSerializer(serializers.ModelSerializer):
     def create(self, validated_data):
         password = validated_data.pop('password', None)
         user = users.objects.create(**validated_data)
+        
         if password:
-            user.password = hashlib.sha256(password.encode()).hexdigest()
+            user.set_password(password)  # better than make_password
+            user.is_active = False       # NEW: block until OTP
             user.save()
+            
+            # NEW: Send OTP email
+            create_and_send_email_otp(user)
+        
         return user
-    
+
+
     def update(self, instance, validated_data):
         password = validated_data.pop('password', None)
         for attr, value in validated_data.items():
             setattr(instance, attr, value)
         if password:
-            instance.password = hashlib.sha256(password.encode()).hexdigest()
+            instance.password = make_password(password)
         instance.save()
         return instance
 
+
 class EventSerializer(serializers.ModelSerializer):
-    # Writable field - accepts user ID for creating/updating
     eventCreator = serializers.PrimaryKeyRelatedField(
         queryset=users.objects.all(),
         required=False,
         allow_null=True
     )
-    
-    # Read-only field - returns full URL to the uploaded image
     eventCoverPhoto_url = serializers.SerializerMethodField()
-    
-    # Read-only field - returns full user details
     eventCreator_detail = UserSerializer(source="eventCreator", read_only=True)
-    
+
+    # visibility field MUST be here, before Meta:
+    visibility = serializers.ChoiceField(
+        choices=[("admin", "Admin"), ("img", "IMG Member"), ("public", "Public")],
+        required=False,
+        default="public",
+    )
+
     class Meta:
         model = Events
         fields = (
@@ -51,28 +67,29 @@ class EventSerializer(serializers.ModelSerializer):
             "eventdate",
             "eventtime",
             "eventlocation",
-            "eventCoverPhoto",      # Writable - upload file here
-            "eventCoverPhoto_url",  # Read-only - returns full URL
-            "eventCreator",         # Writable - accepts user ID
-            "eventCreator_detail"   # Read-only - returns full user object
+            "eventCoverPhoto",
+            "eventCoverPhoto_url",
+            "eventCreator",
+            "eventCreator_detail",
+            "visibility",              # make sure it's included here
         )
         read_only_fields = ("eventid", "eventCoverPhoto_url", "eventCreator_detail")
         extra_kwargs = {
-            'eventname': {'required': False},
-            'eventdesc': {'required': False},
-            'eventdate': {'required': False},
-            'eventtime': {'required': False},
-            'eventlocation': {'required': False},
-            'eventCoverPhoto': {'required': False},
+            "eventname": {"required": False},
+            "eventdesc": {"required": False},
+            "eventdate": {"required": False},
+            "eventtime": {"required": False},
+            "eventlocation": {"required": False},
+            "eventCoverPhoto": {"required": False},
         }
+
     def get_eventCoverPhoto_url(self, obj):
-        """Generate full URL for the event cover photo"""
         if obj.eventCoverPhoto:
-            request = self.context.get('request')
+            request = self.context.get("request")
             if request is not None:
                 return request.build_absolute_uri(obj.eventCoverPhoto.url)
             return obj.eventCoverPhoto.url
-        return None
+        return None 
 
 class PhotoSerializer(serializers.ModelSerializer):
     class Meta:
@@ -101,3 +118,27 @@ class viewedPhotoSerializer(serializers.ModelSerializer):
     class Meta:
         model = viewedPhoto
         fields = '__all__'
+
+
+# accounts/serializers.py (or wherever)
+
+
+class UserGroupSerializer(serializers.ModelSerializer):
+    groups = serializers.SlugRelatedField(
+        many=True,
+        slug_field="name",
+        queryset=Group.objects.all()
+    )
+
+    class Meta:
+        model = User
+        fields = ["userid", "username", "email", "groups"]  # adjust userid field name
+        read_only_fields = ["username", "email"]
+
+
+class RequestOTPSerializer(serializers.Serializer):
+    email = serializers.EmailField()
+
+class VerifyOTPSerializer(serializers.Serializer):
+    email = serializers.EmailField()
+    code = serializers.CharField(max_length=6)

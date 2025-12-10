@@ -1,13 +1,20 @@
 from rest_framework import viewsets, status, filters
 from rest_framework.decorators import action
 from rest_framework.response import Response
-from rest_framework.permissions import BasePermission , IsAuthenticated
+from rest_framework.permissions import BasePermission , IsAuthenticated , AllowAny
 from rest_framework.authentication import TokenAuthentication 
 from rest_framework.authtoken.models import Token
+from .permissions import IsAdmin , ReadOnly , IsSelfOrAdmin , IsEventOwnerOrAdmin , IsPhotoOwnerEventOwnerOrAdmin
+from .permissions import is_admin , is_img_member
 from django.contrib.auth import get_user_model
 from django_filters.rest_framework import DjangoFilterBackend, FilterSet, DateFilter, CharFilter, NumberFilter
 from .serializers import UserSerializer , EventSerializer , PhotoSerializer , commentSerializer, likedPhotoSerializer, downloadedPhotoSerializer, viewedPhotoSerializer
 import hashlib
+
+from guardian.shortcuts import get_objects_for_user
+from .utils import set_event_perms
+
+
 from rest_framework.pagination import LimitOffsetPagination # Or PageNumberPagination   
 from users.models import users
 from photos.models import Photo 
@@ -39,65 +46,139 @@ class UserViewSet(viewsets.ModelViewSet):
     queryset = User.objects.all()
     serializer_class = UserSerializer
 
-    # Use DRF TokenAuthentication
     authentication_classes = [TokenAuthentication]
     permission_classes = [CreateOnlyPermission]
 
-    lookup_field = 'userid'
+    lookup_field = "userid"
 
     pagination_class = LimitOffsetPagination
     page_size = 10
-    
 
     filter_backends = [DjangoFilterBackend, filters.SearchFilter, filters.OrderingFilter]
-    search_fields = ['username', 'email', 'dept', 'userbio', 'enrollmentNo']
-    filterset_fields = ['dept', 'batch', 'is_active']
-    ordering_fields = ['username', 'date_joined', 'batch']
-    ordering = ['username']
+    search_fields = ["username", "email", "dept", "userbio", "enrollmentNo"]
+    filterset_fields = ["dept", "batch", "is_active"]
+    ordering_fields = ["username", "date_joined", "batch"]
+    ordering = ["username"]
 
-    @action(detail=False, methods=['post'])
+    @action(detail=False, methods=["post"])
     def login(self, request):
-        username = request.data.get('username')
-        password = request.data.get('password')
-        
-        if not username or not password:
-            return Response({'error': 'username and password required'}, status=status.HTTP_400_BAD_REQUEST)
-        
-        # Normalize username: strigitp whitespace and use case-insensitive lookup
-        username_norm = username.strip()
+        # 1) Get email + password from body
+        email = request.data.get("email")
+        password = request.data.get("password")
+
+        if not email or not password:
+            return Response(
+                {"error": "email and password required"},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        # 2) Normalize email
+        email_norm = email.strip().lower()
+
+        # 3) Find user by email
         try:
-            user = users.objects.get(username__iexact=username_norm)
-        except users.DoesNotExist:
-            return Response({'error': 'User not found'}, status=status.HTTP_404_NOT_FOUND)
-        
-        # Use Django's built-in password checking
+            user = User.objects.get(email__iexact=email_norm)
+        except User.DoesNotExist:
+            return Response(
+                {"error": "User not found"},
+                status=status.HTTP_404_NOT_FOUND,
+            )
+
+        # 4) Check password
         if not user.check_password(password):
-            return Response({'error': 'Invalid credentials'}, status=status.HTTP_401_UNAUTHORIZED)
-        
-        # Use DRF Token model
+            return Response(
+                {"error": "Invalid credentials"},
+                status=status.HTTP_401_UNAUTHORIZED,
+            )
+
+        # 5) Block if email not verified (OTP not done yet)
+        if not user.is_active:
+            return Response(
+                {"error": "Email not verified"},
+                status=status.HTTP_403_FORBIDDEN,
+            )
+
+        # 6) Issue DRF token
         token_obj, _ = Token.objects.get_or_create(user=user)
-        return Response({
-            'token': token_obj.key,
-            'user': UserSerializer(user, context={'request': request}).data
-        })
-    
+
+        # 7) Return token + user info
+        return Response(
+            {
+                "token": token_obj.key,
+                "user": UserSerializer(user, context={"request": request}).data,
+            },
+            status=status.HTTP_200_OK,
+        )
+
+    def get_permissions(self):
+        if self.request.method in ("GET", "HEAD", "OPTIONS"):
+            return [ReadOnly()]
+        return [IsSelfOrAdmin()]
+
+
+from .serializers import UserGroupSerializer
+
+class UserGroupViewSet(viewsets.ModelViewSet):
+    queryset = User.objects.all()
+    serializer_class = UserGroupSerializer
+    authentication_classes = [TokenAuthentication]
+    permission_classes = [IsAuthenticated, IsAdmin]
+    lookup_field = "userid"  # or "id" if your pk is id
+
+
+
 
 class EventViewSet(viewsets.ModelViewSet):
     queryset = Events.objects.all()
     serializer_class = EventSerializer
-
     authentication_classes = [TokenAuthentication]
-    permission_classes = [IsAuthenticated]  # keep or change as needed
-
     pagination_class = LimitOffsetPagination
     page_size = 10
-
     lookup_field = "eventid"
     filter_backends = [DjangoFilterBackend, filters.SearchFilter, filters.OrderingFilter]
     search_fields = ["eventname", "eventlocation", "eventdesc"]
     filterset_fields = ["eventdate", "eventCreator", "eventlocation", "eventtime"]
     ordering_fields = ["eventname", "eventdate", "eventtime", "eventlocation"]
-    ordering = ["eventdate", "eventname", "eventtime", "eventlocation"]  
+    ordering = ["eventdate", "eventname", "eventtime", "eventlocation"]
+
+    def get_queryset(self):
+        user = self.request.user
+        if user.is_authenticated and (user.is_staff or user.groups.filter(name="Admin").exists()):
+            return Events.objects.all()
+        return get_objects_for_user(
+            user=user,
+            perms="view_event_obj",
+            klass=Events,
+            any_perm=True,
+            with_superuser=True,
+        )
+
+    def get_permissions(self):
+        if self.action in ["list", "retrieve"]:
+            return [AllowAny()]
+        if self.action == "create":
+            # only Admin or IMG Member may create events
+            return [IsAuthenticated()]
+        # update/delete: owner or admin
+        return [IsAuthenticated(), IsEventOwnerOrAdmin()]
+
+    def perform_create(self, serializer):
+        user = self.request.user
+        if not (is_admin(user) or is_img_member(user)):
+            # block non-admin, non-IMG member at runtime
+            from rest_framework.exceptions import PermissionDenied
+            raise PermissionDenied("Only Admin or IMG Member can create events.")
+        visibility = serializer.validated_data.get("visibility", "public")
+        event = serializer.save(eventCreator=user)
+        extra_users = self.request.data.get("extra_users", [])
+        set_event_perms(event, visibility, extra_user_ids=extra_users)
+
+    def perform_update(self, serializer):
+        visibility = self.request.data.get("visibility", None)
+        event = serializer.save()
+        if visibility is not None:
+            extra_users = self.request.data.get("extra_users", [])
+            set_event_perms(event, visibility, extra_user_ids=extra_users)
 
       
     
@@ -123,15 +204,16 @@ class PhotoFilter(FilterSet):
         # Django will translate extractedTags__contains=[value] to JSON containment
         return queryset.filter(extractedTags__contains=[value])
 
+
 class PhotoViewSet(viewsets.ModelViewSet):
     """
-    Photo viewset with combined filtering:
-      - uploader (user id)
-      - tag (single tag)
-      - date / date_after / date_before
-    Example: /api/photos/?uploader=3&tag=fun&date_after=2025-11-01
+    Photo viewset with:
+      - filtering (uploader, tag, date range)
+      - single create/update/delete
+      - bulk-create
+      - bulk-delete
     """
-    queryset = Photo.objects.all().select_related('event', 'uploadedBy')
+    queryset = Photo.objects.all().select_related("event", "uploadedBy")
     serializer_class = PhotoSerializer
 
     filter_backends = [DjangoFilterBackend, filters.SearchFilter, filters.OrderingFilter]
@@ -141,11 +223,97 @@ class PhotoViewSet(viewsets.ModelViewSet):
     page_size = 10
 
     authentication_classes = [TokenAuthentication]
-    permission_classes = [IsAuthenticated]  # keep or change as needed
+    permission_classes = [IsAuthenticated]
 
     search_fields = ["photoDesc", "event__eventname", "uploadedBy__username"]
     ordering_fields = ["uploadDate", "photoid"]
     ordering = ["-uploadDate"]
+
+    def get_permissions(self):
+        # Anyone authenticated can view photos
+        if self.action in ["list", "retrieve"]:
+            return [IsAuthenticated()]
+        # Single create/update/delete require object-level permissions
+        if self.action in ["create", "update", "partial_update", "destroy"]:
+            return [IsAuthenticated(), IsPhotoOwnerEventOwnerOrAdmin()]
+        # Bulk actions: use same permission as single create/delete
+        if self.action in ["bulk_create", "bulk_delete"]:
+            return [IsAuthenticated()]
+        return super().get_permissions()
+
+    def perform_create(self, serializer):
+        # Single create: uploader is always the request user
+        serializer.save(uploader=self.request.user)
+
+    @action(detail=False, methods=["post"], url_path="bulk-create")
+    def bulk_create(self, request):
+        """
+        Create multiple photos in one call.
+        Body:
+        {
+          "photos": [
+            {
+              "photoDesc": "...",
+              "event": 3,
+              "...": "other Photo fields"
+            },
+            ...
+          ]
+        }
+        Uploader is always set to request.user for each photo.
+        """
+        photos_data = request.data.get("photos", [])
+        if not isinstance(photos_data, list):
+            return Response({"error": "photos must be a list"}, status=status.HTTP_400_BAD_REQUEST)
+
+        created = []
+        errors = []
+
+        for idx, data in enumerate(photos_data):
+            # Make a mutable copy and force uploader to current user
+            item = dict(data)
+            item["uploader"] = request.user.pk
+
+            serializer = self.get_serializer(data=item)
+            if serializer.is_valid():
+                serializer.save()  # perform_create logic is not called here, we set uploader directly
+                created.append(serializer.data)
+            else:
+                errors.append({"index": idx, "errors": serializer.errors})
+
+        return Response(
+            {"created": created, "errors": errors},
+            status=status.HTTP_207_MULTI_STATUS if errors else status.HTTP_201_CREATED,
+        )
+
+    @action(detail=False, methods=["post"], url_path="bulk-delete")
+    def bulk_delete(self, request):
+        """
+        Delete multiple photos by ID list.
+        Body: {"photo_ids": [1, 2, 3]}
+        Each photo is deleted only if user passes IsPhotoOwnerEventOwnerOrAdmin.
+        """
+        ids = request.data.get("photo_ids", [])
+        if not isinstance(ids, list):
+            return Response({"error": "photo_ids must be a list"}, status=status.HTTP_400_BAD_REQUEST)
+
+        photos = Photo.objects.filter(pk__in=ids).select_related("event", "uploadedBy")
+        deleted = []
+        skipped = []
+
+        perm_checker = IsPhotoOwnerEventOwnerOrAdmin()
+
+        for photo in photos:
+            if perm_checker.has_object_permission(request, self, photo):
+                deleted.append(photo.pk)
+                photo.delete()
+            else:
+                skipped.append(photo.pk)
+
+        return Response(
+            {"deleted": deleted, "skipped_no_permission": skipped},
+            status=status.HTTP_200_OK,
+        )
 
 
 

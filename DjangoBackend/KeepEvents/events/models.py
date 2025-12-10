@@ -10,12 +10,26 @@ class Events(models.Model):
     eventCoverPhoto = models.ImageField(upload_to='event_covers/', blank=True, default='' )
     eventCreator = models.ForeignKey(settings.AUTH_USER_MODEL , on_delete=models.SET_NULL, null=True)
     eventlocation = models.CharField(max_length=100)
+    visibility = models.CharField(
+        max_length=10,
+        choices=(
+            ("admin", "Admin"),
+            ("img", "IMG Member"),
+            ("public", "Public"),
+        ),
+        default="public",
+    )
 
     class Meta:
         db_table = 'events'
         verbose_name = 'Event'
         verbose_name_plural = 'Events'
         ordering = ['eventdate', 'eventtime']
+        permissions = (
+            ("view_event_obj", "Can view this event object"),
+            ("change_event_obj", "Can change this event object"),
+            ("delete_event_obj", "Can delete this event object"),
+        )
 
     def __str__(self):
         return self.eventname

@@ -4,7 +4,7 @@ from .models import Events  # adjust if your model name/path is different
 
 @admin.register(Events)
 class EventsAdmin(admin.ModelAdmin):
-    list_display = ('eventid', 'eventname', 'eventdate', 'eventtime', 'eventCreator', 'cover_thumbnail')
+    list_display = ('eventid', 'eventname', 'eventdate', 'eventtime', 'eventCreator', 'cover_thumbnail', 'visibility')
     search_fields = ('eventname', 'eventlocation', 'eventdesc')
     list_filter = ('eventdate',)
     readonly_fields = ('image_preview',)  # shown in detail view
@@ -18,6 +18,9 @@ class EventsAdmin(admin.ModelAdmin):
         }),
         ('Media & Creator', {
             'fields': ('eventCoverPhoto', 'image_preview', 'eventCreator')
+        }),
+        ('Visibility', {
+            'fields': ('visibility',)
         }),
     )
 
@@ -34,3 +37,5 @@ class EventsAdmin(admin.ModelAdmin):
             return format_html('<img src="{}" style="max-height:60px;"/>', obj.eventCoverPhoto.url)
         return ""
     cover_thumbnail.short_description = "Cover"
+
+    
