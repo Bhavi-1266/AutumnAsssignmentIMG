@@ -170,6 +170,12 @@ EMAIL_HOST = "smtp.gmail.com"
 EMAIL_PORT = 587
 EMAIL_USE_TLS = True
 
+import json
+with open( "../config.json") as f:
+    config = json.load(f)
+
+EMAIL_HOST_USER = config["EMAIL_HOST_USER"]
+EMAIL_HOST_PASSWORD = config["EMAIL_HOST_PASSWORD"]
 DEFAULT_FROM_EMAIL = "your_email@gmail.com"
 
 
