@@ -47,11 +47,12 @@ INSTALLED_APPS = [
     "dj_rest_auth",
     "dj_rest_auth.registration",
 
-    # your apps...
     "events",
     "photos",
-
     "users.apps.UsersConfig",   
+
+    "guardian",
+    "api",
 ]
 
 

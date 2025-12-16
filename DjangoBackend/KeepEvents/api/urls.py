@@ -23,6 +23,7 @@ urlpatterns = [
     path("", include(router.urls)),
     path("auth/request-otp/", request_email_otp),
     path("auth/verify-otp/", verify_email_otp),
+    path("auth/me-token/", me_token),
 ]
 
 
