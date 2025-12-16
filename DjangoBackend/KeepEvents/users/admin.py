@@ -9,7 +9,7 @@ User = get_user_model()
 
 @admin.register(User)   # use your actual model class, not `users` string
 class UsersAdmin(UserAdmin):
-    list_display = ('userid','username', 'email', 'dept', 'batch', 'thumbnail', 'is_active')
+    list_display = ('username', 'email', 'dept', 'batch', 'thumbnail', 'is_active')
     readonly_fields = ('date_joined', 'thumbnail')
 
     fieldsets = (
@@ -33,7 +33,7 @@ class UsersAdmin(UserAdmin):
         (None, {
             'classes': ('wide',),
             'fields': (
-                'userid',
+                
                 'username',
                 'email',
                 'password1', 'password2',  # use password1/password2 for add form
