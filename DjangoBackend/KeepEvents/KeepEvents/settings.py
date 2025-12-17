@@ -188,7 +188,10 @@ with open( "../config.json") as f:
 EMAIL_HOST_USER = config["EMAIL_HOST_USER"]
 EMAIL_HOST_PASSWORD = config["EMAIL_HOST_PASSWORD"]
 DEFAULT_FROM_EMAIL = "your_email@gmail.com"
-
+OMNIPORT_CLIENT_ID = config["CLIENT_ID"]
+OMNIPORT_CLIENT_SECRET = config["CLIENT_SECRET"]
+OMNIPORT_BASE_URL = config["BASE_URL"]
+OMNIPORT_REDIRECT_URI = config["REDIRECT_URI"]
 
 SOCIALACCOUNT_PROVIDERS = {
     "google": {
@@ -201,3 +204,9 @@ SOCIALACCOUNT_PROVIDERS = {
         "AUTH_PARAMS": {"access_type": "online"},
     }
 }
+
+
+#omniport Oauth
+
+# settings.py
+
