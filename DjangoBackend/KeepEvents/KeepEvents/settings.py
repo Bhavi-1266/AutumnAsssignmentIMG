@@ -16,197 +16,301 @@ from pathlib import Path
 BASE_DIR = Path(__file__).resolve().parent.parent
 
 
-# Quick-start development settings – unsuitable for production
+# ==============================================================================
+# CORE DJANGO SETTINGS
+# ==============================================================================
+
+# SECURITY WARNING: keep the secret key used in production secret!
 SECRET_KEY = "django-insecure-1tw^7jzh%%0r1lo6$tkf&6^s%esu42a2tq7b4-n(9*lgz$o0x3"
+
+# SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
+
+# Hosts/domain names that are valid for this site
 ALLOWED_HOSTS = []
 
 
-# Application definition
+# ==============================================================================
+# APPLICATION DEFINITION
+# ==============================================================================
+
 INSTALLED_APPS = [
-    # Django
-    "django.contrib.sites",
-    "django.contrib.auth",
-    "django.contrib.contenttypes",
-    "django.contrib.sessions",
-    "django.contrib.messages",
-    "django.contrib.staticfiles",
-    "django.contrib.admin",
+    # Django built-in apps
+    "django.contrib.sites",           # Required for allauth - manages multiple sites
+    "django.contrib.auth",            # Authentication framework
+    "django.contrib.contenttypes",    # Content type system
+    "django.contrib.sessions",        # Session framework
+    "django.contrib.messages",        # Messaging framework
+    "django.contrib.staticfiles",     # Static file management
+    "django.contrib.admin",           # Admin interface
 
-    # DRF
-    "rest_framework",
-    "rest_framework.authtoken",
+    # Django REST Framework
+    "rest_framework",                 # API framework
+    "rest_framework.authtoken",       # Token authentication for API
 
-    # Allauth
-    "allauth",
-    "allauth.account",
-    "allauth.socialaccount",
-    "allauth.socialaccount.providers.google",
+    # Django Allauth - Social authentication
+    "allauth",                        # Core allauth app
+    "allauth.account",                # Account management (login, signup, etc.)
+    "allauth.socialaccount",          # Social account connections
+    "allauth.socialaccount.providers.google",  # Google OAuth provider
 
-    # dj-rest-auth
-    "dj_rest_auth",
-    "dj_rest_auth.registration",
+    # dj-rest-auth - REST API endpoints for auth
+    "dj_rest_auth",                   # Login, logout, password reset endpoints
+    "dj_rest_auth.registration",      # Registration endpoints
 
-    "events",
-    "photos",
-    "users.apps.UsersConfig",   
+    # Custom project apps
+    "events",                         # Event management app
+    "photos",                         # Photo management app
+    "users.apps.UsersConfig",         # Custom user model and user management
+    "guardian",                       # Object-level permissions
+    "api",                            # API endpoints
 
-    "guardian",
-    "api",
-
-    # CORS
-    "corsheaders",
+    # CORS Headers
+    "corsheaders",                    # Cross-Origin Resource Sharing support
 ]
 
+
+# ==============================================================================
+# MIDDLEWARE CONFIGURATION
+# ==============================================================================
+# Middleware is processed in order for requests (top to bottom)
+# and in reverse for responses (bottom to top)
 
 MIDDLEWARE = [
-    "django.middleware.security.SecurityMiddleware",
-    "django.contrib.sessions.middleware.SessionMiddleware",
-    "django.middleware.common.CommonMiddleware",
-    "django.middleware.csrf.CsrfViewMiddleware",
-    "allauth.account.middleware.AccountMiddleware",  
-    "django.contrib.auth.middleware.AuthenticationMiddleware",
-    "django.contrib.messages.middleware.MessageMiddleware",
-    "django.middleware.clickjacking.XFrameOptionsMiddleware",
-    "corsheaders.middleware.CorsMiddleware",
+    "corsheaders.middleware.CorsMiddleware",               # CORS header handling
+    "django.middleware.security.SecurityMiddleware",        # Security enhancements
+    "django.contrib.sessions.middleware.SessionMiddleware", # Session management
+    "django.middleware.common.CommonMiddleware",            # Common utilities (URL rewriting, etc.)
+    "django.middleware.csrf.CsrfViewMiddleware",           # CSRF protection
+    "allauth.account.middleware.AccountMiddleware",         # Allauth account handling
+    "django.contrib.auth.middleware.AuthenticationMiddleware",  # Associates users with requests
+    "django.contrib.messages.middleware.MessageMiddleware", # Message framework
+    "django.middleware.clickjacking.XFrameOptionsMiddleware",  # Clickjacking protection
+    
 ]
 
 
-CORS_ALLOWED_ORIGINS = [
-    "http://localhost:5173",
-    "http://127.0.0.1:5173",
-]
+# ==============================================================================
+# URL CONFIGURATION
+# ==============================================================================
 
+# Root URL configuration module
 ROOT_URLCONF = "KeepEvents.urls"
+
+
+# ==============================================================================
+# TEMPLATE CONFIGURATION
+# ==============================================================================
 
 TEMPLATES = [
     {
         "BACKEND": "django.template.backends.django.DjangoTemplates",
-        "DIRS": [],
-        "APP_DIRS": True,
+        "DIRS": [],                    # Additional directories to search for templates
+        "APP_DIRS": True,              # Look for templates in each app's templates/ directory
         "OPTIONS": {
             "context_processors": [
-                "django.template.context_processors.request",
-                "django.contrib.auth.context_processors.auth",
-                "django.contrib.messages.context_processors.messages",
+                "django.template.context_processors.request",  # Makes request available in templates
+                "django.contrib.auth.context_processors.auth", # Adds user and perms to context
+                "django.contrib.messages.context_processors.messages",  # Adds messages to context
             ],
         },
     },
 ]
 
+
+# ==============================================================================
+# WSGI CONFIGURATION
+# ==============================================================================
+
+# WSGI application used by Django's runserver
 WSGI_APPLICATION = "KeepEvents.wsgi.application"
 
 
-# Database
+# ==============================================================================
+# DATABASE CONFIGURATION
+# ==============================================================================
+
 DATABASES = {
     "default": {
-        "ENGINE": "django.db.backends.postgresql_psycopg2",
-        "NAME": "AutumnAssDjango",
-        "USER": "postgres",
-        "PASSWORD": "Bhavy@1266",
-        "HOST": "localhost",
-        "PORT": "5433",
+        "ENGINE": "django.db.backends.postgresql_psycopg2",  # PostgreSQL database
+        "NAME": "AutumnAssDjango",     # Database name
+        "USER": "postgres",            # Database user
+        "PASSWORD": "Bhavy@1266",      # Database password (should be in env variable)
+        "HOST": "localhost",           # Database host
+        "PORT": "5433",                # Database port
     }
 }
 
 
-# Password validation
+# ==============================================================================
+# PASSWORD VALIDATION
+# ==============================================================================
+# Validators that check password strength
+
 AUTH_PASSWORD_VALIDATORS = [
-    {"NAME": "django.contrib.auth.password_validation.UserAttributeSimilarityValidator"},
-    {"NAME": "django.contrib.auth.password_validation.MinimumLengthValidator"},
-    {"NAME": "django.contrib.auth.password_validation.CommonPasswordValidator"},
-    {"NAME": "django.contrib.auth.password_validation.NumericPasswordValidator"},
+    {"NAME": "django.contrib.auth.password_validation.UserAttributeSimilarityValidator"},  # Prevents passwords similar to user info
+    {"NAME": "django.contrib.auth.password_validation.MinimumLengthValidator"},            # Enforces minimum length
+    {"NAME": "django.contrib.auth.password_validation.CommonPasswordValidator"},           # Prevents common passwords
+    {"NAME": "django.contrib.auth.password_validation.NumericPasswordValidator"},          # Prevents numeric-only passwords
 ]
 
 
-# Authentication backends
+# ==============================================================================
+# AUTHENTICATION BACKENDS
+# ==============================================================================
+# Order matters - Django tries each backend in sequence
+
 AUTHENTICATION_BACKENDS = (
-    "django.contrib.auth.backends.ModelBackend",      # default
-    "guardian.backends.ObjectPermissionBackend",      # guardian
+    "django.contrib.auth.backends.ModelBackend",      # Standard Django authentication
+    "guardian.backends.ObjectPermissionBackend",      # Object-level permissions via Guardian
 )
 
 
-# Internationalization
-LANGUAGE_CODE = "en-us"
-TIME_ZONE = "UTC"
-USE_I18N = True
-USE_TZ = True
+# ==============================================================================
+# INTERNATIONALIZATION
+# ==============================================================================
+
+LANGUAGE_CODE = "en-us"  # Default language
+TIME_ZONE = "UTC"        # Default timezone
+USE_I18N = True          # Enable Django's translation system
+USE_TZ = True            # Enable timezone-aware datetimes
 
 
-# Static files
-STATIC_URL = "/static/"
-STATIC_ROOT = BASE_DIR / "staticfiles"
+# ==============================================================================
+# STATIC FILES (CSS, JavaScript, Images)
+# ==============================================================================
+
+STATIC_URL = "/static/"                # URL prefix for static files
+STATIC_ROOT = BASE_DIR / "staticfiles" # Where collectstatic will collect files for production
 STATICFILES_DIRS = [
-    BASE_DIR / "static",
+    BASE_DIR / "static",               # Additional locations for static files
 ]
 
 
-# Media files
-MEDIA_URL = "/media/"
-MEDIA_ROOT = BASE_DIR / "media"
+# ==============================================================================
+# MEDIA FILES (User-uploaded content)
+# ==============================================================================
+
+MEDIA_URL = "/media/"        # URL prefix for media files
+MEDIA_ROOT = BASE_DIR / "media"  # Filesystem path where media files are stored
 
 
-# REST Framework settings
+# ==============================================================================
+# DJANGO REST FRAMEWORK CONFIGURATION
+# ==============================================================================
+
 REST_FRAMEWORK = {
     "DEFAULT_AUTHENTICATION_CLASSES": [
-        "rest_framework.authentication.TokenAuthentication",
-        "rest_framework.authentication.SessionAuthentication",
+        "rest_framework.authentication.TokenAuthentication",   # Token-based auth for APIs
+        "rest_framework.authentication.SessionAuthentication", # Session-based auth for browsable API
     ],
     "DEFAULT_PERMISSION_CLASSES": [
-        "rest_framework.permissions.AllowAny",
+        "rest_framework.permissions.AllowAny",  # Default: allow all (override in views as needed)
     ],
     "DEFAULT_PAGINATION_CLASS": "rest_framework.pagination.PageNumberPagination",
-    "PAGE_SIZE": 10,
+    "PAGE_SIZE": 10,  # Number of items per page in paginated responses
 }
 
 
-# Custom user model
+# ==============================================================================
+# CUSTOM USER MODEL
+# ==============================================================================
+
+# Points to custom user model instead of Django's default
 AUTH_USER_MODEL = "users.users"
 
-# Django Guardian anonymous user name
+
+# ==============================================================================
+# DJANGO GUARDIAN CONFIGURATION
+# ==============================================================================
+
+# Username for anonymous users in Guardian permission system
 ANONYMOUS_USER_NAME = "Anonymous"
 
 
-SITE_ID = 1
+# ==============================================================================
+# DJANGO ALLAUTH CONFIGURATION
+# ==============================================================================
 
-ACCOUNT_EMAIL_VERIFICATION = "none"   # will handle our own OTP
-ACCOUNT_AUTHENTICATION_METHOD = "email"
-ACCOUNT_EMAIL_REQUIRED = True
+SITE_ID = 1  # ID of the current site in django.contrib.sites
 
-# EMAIL_BACKEND = "django.core.mail.backends.console.EmailBackend"
+# Email verification settings
+ACCOUNT_EMAIL_VERIFICATION = "none"   # Disabled - will handle our own OTP verification
+ACCOUNT_AUTHENTICATION_METHOD = "email"  # Use email instead of username for login
+ACCOUNT_EMAIL_REQUIRED = True  # Email is required for registration
+
+# New allauth configuration (replaces deprecated settings)
+ACCOUNT_LOGIN_METHODS = {'email'}  # Users log in with email
+ACCOUNT_SIGNUP_FIELDS = {
+    'email': {'required': True},
+    'username': {'required': True},
+    'password1': {'required': True},
+    'password2': {'required': True},
+}
+
+# Social account provider configuration
+SOCIALACCOUNT_PROVIDERS = {
+    "google": {
+        "APP": {
+            "client_id": "<YOUR_GOOGLE_CLIENT_ID>",     # Google OAuth client ID
+            "secret": "<YOUR_GOOGLE_CLIENT_SECRET>",    # Google OAuth client secret
+            "key": "",
+        },
+        "SCOPE": ["profile", "email"],  # Permissions requested from Google
+        "AUTH_PARAMS": {"access_type": "online"},  # OAuth parameters
+    }
+}
+
+
+# ==============================================================================
+# EMAIL CONFIGURATION
+# ==============================================================================
+
+# EMAIL_BACKEND = "django.core.mail.backends.console.EmailBackend"  # For development - prints to console
 # DEFAULT_FROM_EMAIL = "no-reply@keepevents.local"
 
+# Production email settings using Gmail SMTP
 EMAIL_BACKEND = "django.core.mail.backends.smtp.EmailBackend"
-EMAIL_HOST = "smtp.gmail.com"
-EMAIL_PORT = 587
-EMAIL_USE_TLS = True
+EMAIL_HOST = "smtp.gmail.com"  # Gmail SMTP server
+EMAIL_PORT = 587               # TLS port
+EMAIL_USE_TLS = True           # Use TLS encryption
 
+# Load sensitive email credentials from config file
 import json
 with open( "../config.json") as f:
     config = json.load(f)
 
-EMAIL_HOST_USER = config["EMAIL_HOST_USER"]
-EMAIL_HOST_PASSWORD = config["EMAIL_HOST_PASSWORD"]
+EMAIL_HOST_USER = config["EMAIL_HOST_USER"]         # Gmail address
+EMAIL_HOST_PASSWORD = config["EMAIL_HOST_PASSWORD"] # Gmail app password
 DEFAULT_FROM_EMAIL = "your_email@gmail.com"
-OMNIPORT_CLIENT_ID = config["CLIENT_ID"]
-OMNIPORT_CLIENT_SECRET = config["CLIENT_SECRET"]
-OMNIPORT_BASE_URL = config["BASE_URL"]
-OMNIPORT_REDIRECT_URI = config["REDIRECT_URI"]
-
-SOCIALACCOUNT_PROVIDERS = {
-    "google": {
-        "APP": {
-            "client_id": "<YOUR_GOOGLE_CLIENT_ID>",
-            "secret": "<YOUR_GOOGLE_CLIENT_SECRET>",
-            "key": "",
-        },
-        "SCOPE": ["profile", "email"],
-        "AUTH_PARAMS": {"access_type": "online"},
-    }
-}
 
 
-#omniport Oauth
+# ==============================================================================
+# OMNIPORT CONFIGURATION (Custom OAuth)
+# ==============================================================================
 
-# settings.py
+OMNIPORT_CLIENT_ID = config["CLIENT_ID"]           # Omniport OAuth client ID
+OMNIPORT_CLIENT_SECRET = config["CLIENT_SECRET"]   # Omniport OAuth client secret
+OMNIPORT_BASE_URL = config["BASE_URL"]             # Omniport API base URL
+OMNIPORT_REDIRECT_URI = config["REDIRECT_URI"]     # OAuth redirect URI
 
+
+# ==============================================================================
+# CORS (Cross-Origin Resource Sharing) CONFIGURATION
+# ==============================================================================
+
+CORS_ALLOW_ALL_ORIGINS = True  # Allow requests from any origin (development only!)
+CORS_ALLOW_CREDENTIALS = True  # Allow cookies to be sent with requests
+
+# Allowed HTTP headers in CORS requests
+CORS_ALLOW_HEADERS = [
+    'accept',
+    'accept-encoding',
+    'authorization',      # Required for token authentication
+    'content-type',
+    'dnt',
+    'origin',
+    'user-agent',
+    'x-csrftoken',       # Required for CSRF protection
+    'x-requested-with',
+]

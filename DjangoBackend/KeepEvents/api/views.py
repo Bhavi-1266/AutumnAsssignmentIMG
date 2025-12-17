@@ -193,11 +193,11 @@ class PhotoFilter(FilterSet):
     # range: ?date_after=YYYY-MM-DD & ?date_before=YYYY-MM-DD
     date_after = DateFilter(field_name="uploadDate", lookup_expr="date__gte")
     date_before = DateFilter(field_name="uploadDate", lookup_expr="date__lte")
+    event = NumberFilter(field_name="event_id")
 
     class Meta:
         model = Photo
-        fields = []  # custom filters only
-
+        fields = [ "uploader", "tag", "date", "date_after", "date_before", "event"]  # custom filters only
     def filter_by_tag(self, queryset, name, value):
         # Assumes extractedTags is a JSONField storing a list of strings.
         # PostgreSQL: list contains exact value

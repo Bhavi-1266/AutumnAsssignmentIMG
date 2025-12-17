@@ -26,7 +26,7 @@ urlpatterns = [
     path("api/auth/", include("dj_rest_auth.urls")),
     path("api/auth/registration/", include("dj_rest_auth.registration.urls")),
     path("accounts/", include("allauth.urls")),
-    path("auth/omniport", include("users.urls")),
+    path("auth/omniport", include("api.urls_omniport")),
 ]
 
 # Serve media files in development
