@@ -4,7 +4,7 @@ from django.contrib.auth.models import AbstractUser
 class users(AbstractUser):
     userid = models.AutoField(primary_key=True)
     username = models.CharField(max_length=150, unique=True)
-    enrollmentNo = models.IntegerField(unique=True, blank=True, default=0 )
+    enrollmentNo = models.IntegerField(unique=True, blank=True, default=None, null=True)
     email = models.EmailField(unique=True, blank=True, default='')
     userProfile = models.ImageField(upload_to='user_profiles/', blank=True, default='' )
     userbio = models.TextField(blank=True, max_length=500 ,null=True)

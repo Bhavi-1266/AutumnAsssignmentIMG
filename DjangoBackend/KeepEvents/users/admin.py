@@ -9,11 +9,11 @@ User = get_user_model()
 
 @admin.register(User)   # use your actual model class, not `users` string
 class UsersAdmin(UserAdmin):
-    list_display = ('username', 'email', 'dept', 'batch', 'thumbnail', 'is_active')
-    readonly_fields = ('date_joined', 'thumbnail')
+    list_display = ("userid",'username', 'email', 'dept', 'batch', 'thumbnail', 'is_active')
+    readonly_fields = ("userid", "date_joined", 'thumbnail')
 
     fieldsets = (
-        (None, {'fields': ('username', 'password')}),
+        (None, {'fields': ('userid', 'username', 'password')}),
         ('Personal', {'fields': ('email', 'userProfile', 'thumbnail', 'userbio', 'enrollmentNo')}),
         ('Academic', {'fields': ('dept', 'batch')}),
         # IMPORTANT: include groups & permissions here

@@ -6,7 +6,8 @@ from rest_framework.authentication import TokenAuthentication
 from rest_framework.authtoken.models import Token
 from .permissions import IsAdmin , ReadOnly , IsSelfOrAdmin , IsEventOwnerOrAdmin , IsPhotoOwnerEventOwnerOrAdmin
 from .permissions import is_admin , is_img_member
-from django.contrib.auth import get_user_model
+from django.contrib.auth import get_user_model 
+from django.contrib.auth.models import Group
 from django_filters.rest_framework import DjangoFilterBackend, FilterSet, DateFilter, CharFilter, NumberFilter
 from .serializers import UserSerializer , EventSerializer , PhotoSerializer , commentSerializer, likedPhotoSerializer, downloadedPhotoSerializer, viewedPhotoSerializer
 import hashlib
@@ -59,6 +60,15 @@ class UserViewSet(viewsets.ModelViewSet):
     filterset_fields = ["dept", "batch", "is_active"]
     ordering_fields = ["username", "date_joined", "batch"]
     ordering = ["username"]
+
+
+    def perform_create(self, serializer):
+        # Save the user first (all validations, constraints still apply)
+        user = serializer.save()
+        
+        # Automatically add to Public group
+        public_group, created = Group.objects.get_or_create(name='Public')
+        user.groups.add(public_group)
 
     @action(detail=False, methods=["post"])
     def login(self, request):

@@ -8,6 +8,8 @@ from rest_framework import serializers
 from django.contrib.auth import get_user_model
 from django.contrib.auth.models import Group
 from api.utils import create_and_send_email_otp
+from django.db import models
+
 
 User = get_user_model()
 
@@ -15,21 +17,56 @@ class UserSerializer(serializers.ModelSerializer):
     class Meta:
         model = users
         fields = '__all__'
-        extra_kwargs = {'password': {'write_only': True}, 'token': {'write_only': True}}
+        extra_kwargs = {
+            'password': {'write_only': True}, 
+            'token': {'write_only': True} ,
+            "username": {"validators": []},  # 🔴 disable default UniqueValidator
+            "email": {"validators": []},  # 🔴 disable default UniqueValidator
+                        }
     
     def create(self, validated_data):
-        password = validated_data.pop('password', None)
+        password = validated_data.pop("password", None)
+
+        username = validated_data.get("username")
+        email = validated_data.get("email")
+
+        # Check if user already exists
+        existing_user = users.objects.filter(
+            models.Q(username=username) | models.Q(email=email)
+        ).first()
+
+        if existing_user:
+            errors = {}
+
+            if existing_user.username == username:
+                errors["username"] = ["User with this username already exists."]
+
+            if existing_user.email == email:
+                errors["email"] = ["User with this email already exists."]
+
+            # include current active status
+            if not existing_user.is_active and password:
+                existing_user.password = make_password(password)
+                existing_user.save(update_fields=["password"])
+
+            errors["is_active"] = existing_user.is_active
+
+
+            raise serializers.ValidationError(errors)
+
+        # Create new user
         user = users.objects.create(**validated_data)
-        
+
         if password:
-            user.set_password(password)  # better than make_password
-            user.is_active = False       # NEW: block until OTP
-            user.save()
-            
-            # NEW: Send OTP email
+            user.set_password(password)
+            user.is_active = False       # block until OTP verification
+            user.save(update_fields=["password", "is_active"])
+
+            # Send OTP email
             create_and_send_email_otp(user)
-        
+
         return user
+
 
 
     def update(self, instance, validated_data):
@@ -119,8 +156,6 @@ class viewedPhotoSerializer(serializers.ModelSerializer):
         model = viewedPhoto
         fields = '__all__'
 
-
-# accounts/serializers.py (or wherever)
 
 
 class UserGroupSerializer(serializers.ModelSerializer):

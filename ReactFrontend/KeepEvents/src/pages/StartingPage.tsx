@@ -20,10 +20,6 @@ function LoginPage() {
           onClick={() => navigate("/register")}
         />
 
-        <EntryBox
-          displayText="Public"
-          onClick={() => navigate("/public")}
-        />
       </div>
     </div>
   );
