@@ -15,7 +15,7 @@ function Login() {
       const data = await login(userEmail, password);
 
       localStorage.setItem("token", data.token);
-      // console.log(`Token: ${data.token}`);
+      localStorage.setItem("userId", data.user.userid);
       navigate("/HomePage");
     } catch (err) {
       setError("Invalid credentials");

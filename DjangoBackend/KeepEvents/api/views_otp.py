@@ -53,7 +53,7 @@ def verify_email_otp(request):
 
     # optional: return token directly after verification
     token, _ = Token.objects.get_or_create(user=user)
-    return Response({"detail": "Email verified", "token": token.key}, status=status.HTTP_200_OK)
+    return Response({"detail": "Email verified", "token": token.key , "user_id": user.id}, status=status.HTTP_200_OK)
 
 
 @api_view(["GET"])

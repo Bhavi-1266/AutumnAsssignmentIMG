@@ -1,9 +1,10 @@
-import { LoadEventPhotos } from "../services/LoadEvetntPhotos.ts";
+import { LoadEventPhotos } from "../services/events.ts";
 import { useEffect, useState } from "react";
 import type { Photo } from "../types/photos.ts";
 import PhotoCard from "../components/PhotoCard.tsx";
 import { useNavigate, useParams } from "react-router-dom";
 import HighlightPhoto from "../components/HighlightPhoto.tsx";
+import CreateCard from "../components/CreateCard.tsx";
 
 function EventPhotos() {
   const navigate = useNavigate();
@@ -49,9 +50,7 @@ function EventPhotos() {
       )}
 
       {photos.length === 0 && !error ? (
-        <p className="text-center text-gray-500">
-          No photos found
-        </p>
+         <CreateCard ToCreate="Photo" onClick={() => navigate(`/createPhoto/${eventId}`)} />
       ) : (
         <div
           className="
@@ -66,6 +65,7 @@ function EventPhotos() {
             mx-auto
           "
         >
+          <CreateCard ToCreate="Photo" onClick={() => navigate(`/createPhoto/${eventId}`)} />
           {photos.map((photo) => (
             <PhotoCard
               key={photo.photoId ?? undefined}

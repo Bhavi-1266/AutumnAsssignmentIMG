@@ -3,7 +3,8 @@ import { useEffect, useState } from "react";
 import type { Event } from "../types/event";
 import EventCard from "../components/EventCard";
 import { useNavigate } from "react-router-dom";
-
+import CreateCard from "../components/CreateCard";
+import type {User}  from "../types/user";
 
 function HomePage() {
         const navigate = useNavigate();
@@ -42,9 +43,21 @@ function HomePage() {
   )}
 
   {events.length === 0 ? (
-    <p className="text-center text-gray-500">
-      No events found
-    </p>
+
+    <div className="
+        grid
+        grid-cols-1
+        sm:grid-cols-2
+        lg:grid-cols-3
+        xl:grid-cols-4
+        gap-6
+        p-6
+        max-w-7xl
+        mx-auto
+        ">
+        <CreateCard ToCreate="Event" onClick={() => navigate("/createEvent")} />
+      
+        </div>
   ) : (
         <div className="
         grid
@@ -57,6 +70,7 @@ function HomePage() {
         max-w-7xl
         mx-auto
         ">
+        <CreateCard ToCreate="Event" onClick={() => navigate("/createEvent")} />
         {events.map((event) => (
             <EventCard
             key={event.eventid}

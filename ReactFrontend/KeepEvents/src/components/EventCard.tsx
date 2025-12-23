@@ -6,7 +6,7 @@ interface EventCardProps {
   onClick?: () => void;
 }
 
-function EventCard({ event, totalPhotos, onClick }: EventCardProps) {
+function EventCard({ event, onClick }: EventCardProps) {
 
 
   return (
@@ -20,11 +20,15 @@ function EventCard({ event, totalPhotos, onClick }: EventCardProps) {
           <img
             src={event.eventCoverPhoto_url}
             alt={event.eventname}
-            className=" h-48 w-full object-contain"
+            className=" h-48 w-full object-contain "
           />
         ) : (
-          <div className="  h-48 w-full flex items-center justify-center text-gray-500">
-            No Image
+          <div className="h-48 flex items-center justify-center">
+          <img
+            src={"../../src/assets/NotFound.png"}
+            alt={event.eventname}
+            className=" h-28 w-full object-contain items-center"   
+          />
           </div>
         )}
       </div>
@@ -45,7 +49,7 @@ function EventCard({ event, totalPhotos, onClick }: EventCardProps) {
 
         <div className="flex justify-between items-center text-sm text-gray-600">
           <span>{event.eventlocation}</span>
-          <span>{totalPhotos} photos</span>
+          <span>M. {event.eventCreator_detail.username}</span>
         </div>
       </div>
     </div>

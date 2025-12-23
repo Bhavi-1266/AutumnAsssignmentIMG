@@ -7,7 +7,7 @@ export interface Event {
   eventname: string;
   eventdesc: string | null;
   eventdate: string | null;     // YYYY-MM-DD
-  eventtime: string | null;     // HH:MM:SS
+  eventtime: string | null;     // HH:MM:SS 
   eventlocation: string | null;
 
   eventCoverPhoto: string | null;
