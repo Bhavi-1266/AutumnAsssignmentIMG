@@ -46,7 +46,6 @@ INSTALLED_APPS = [
 
     # Django REST Framework
     "rest_framework",                 # API framework
-    "rest_framework.authtoken",       # Token authentication for API
 
     # Django Allauth - Social authentication
     "allauth",                        # Core allauth app
@@ -54,10 +53,7 @@ INSTALLED_APPS = [
     "allauth.socialaccount",          # Social account connections
     "allauth.socialaccount.providers.google",  # Google OAuth provider
 
-    # dj-rest-auth - REST API endpoints for auth
-    "dj_rest_auth",                   # Login, logout, password reset endpoints
-    "dj_rest_auth.registration",      # Registration endpoints
-
+  
     # Custom project apps
     "events",                         # Event management app
     "photos",                         # Photo management app
@@ -199,17 +195,47 @@ MEDIA_ROOT = BASE_DIR / "media"  # Filesystem path where media files are stored
 # DJANGO REST FRAMEWORK CONFIGURATION
 # ==============================================================================
 
+from datetime import timedelta
+
+
 REST_FRAMEWORK = {
-    "DEFAULT_AUTHENTICATION_CLASSES": [
-        "rest_framework.authentication.TokenAuthentication",   # Token-based auth for APIs
-        "rest_framework.authentication.SessionAuthentication", # Session-based auth for browsable API
-    ],
-    "DEFAULT_PERMISSION_CLASSES": [
-        "rest_framework.permissions.AllowAny",  # Default: allow all (override in views as needed)
-    ],
+    "DEFAULT_AUTHENTICATION_CLASSES": (
+        "users.authentication.CookieJWTAuthentication",
+    ),
+    "DEFAULT_PERMISSION_CLASSES": (
+        "rest_framework.permissions.IsAuthenticated",
+    ),
     "DEFAULT_PAGINATION_CLASS": "rest_framework.pagination.PageNumberPagination",
-    "PAGE_SIZE": 10,  # Number of items per page in paginated responses
+    "PAGE_SIZE": 10,
 }
+
+#===============================================================================
+# SIMPLE_JWT 
+#===============================================================================
+
+SIMPLE_JWT = {
+     "USER_ID_FIELD": "userid",     
+    "USER_ID_CLAIM": "user_id",
+
+    "ACCESS_TOKEN_LIFETIME": timedelta(minutes=15),
+    "REFRESH_TOKEN_LIFETIME": timedelta(days=7),
+
+    "ROTATE_REFRESH_TOKENS": True,
+    "BLACKLIST_AFTER_ROTATION": True,
+}
+
+SESSION_COOKIE_SECURE = False      # True in production (HTTPS)
+CSRF_COOKIE_SECURE = False         # True in production
+
+SESSION_COOKIE_SAMESITE = "Lax"
+CSRF_COOKIE_SAMESITE = "Lax"
+
+CSRF_COOKIE_HTTPONLY = False
+
+CSRF_TRUSTED_ORIGINS = [
+    "http://localhost:5173",
+    "http://127.0.0.1:5173",
+]
 
 
 # ==============================================================================

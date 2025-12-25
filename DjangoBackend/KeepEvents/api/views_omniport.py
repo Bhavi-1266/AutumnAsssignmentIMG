@@ -3,9 +3,9 @@ from urllib.parse import urlencode
 from django.conf import settings
 import requests
 
-from rest_framework.authtoken.models import Token
 from rest_framework.response import Response
 from rest_framework import status
+from rest_framework_simplejwt.tokens import RefreshToken
 
 from .serializers import UserSerializer
 
@@ -106,13 +106,33 @@ def omniport_callback(request):
 
     user = get_or_create_user_from_omniport(user_response.json())
 
-    token, _ = Token.objects.get_or_create(user=user)
+    refresh = RefreshToken.for_user(user)
 
-    return Response(
+    response = Response(
         {
-            "token": token.key,
-            "user": UserSerializer(user, context={"request": request}).data,
+            "user": UserSerializer(user, context={"request": request}).data
         },
         status=status.HTTP_200_OK,
     )
+
+    response.set_cookie(
+        key="access",
+        value=str(refresh.access_token),
+        httponly=True,
+        secure=False,      # True in production
+        samesite="Lax",
+        max_age=15 * 60,
+    )
+
+    response.set_cookie(
+        key="refresh",
+        value=str(refresh),
+        httponly=True,
+        secure=False,
+        samesite="Lax",
+        max_age=7 * 24 * 60 * 60,
+    )
+
+    return response
+
         

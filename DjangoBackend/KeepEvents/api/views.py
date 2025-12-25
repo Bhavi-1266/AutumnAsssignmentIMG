@@ -2,8 +2,6 @@ from rest_framework import viewsets, status, filters
 from rest_framework.decorators import action
 from rest_framework.response import Response
 from rest_framework.permissions import BasePermission , IsAuthenticated , AllowAny
-from rest_framework.authentication import TokenAuthentication 
-from rest_framework.authtoken.models import Token
 from .permissions import IsAdmin , ReadOnly , IsSelfOrAdmin , IsEventOwnerOrAdmin , IsPhotoOwnerEventOwnerOrAdmin
 from .permissions import is_admin , is_img_member
 from django.contrib.auth import get_user_model 
@@ -11,6 +9,7 @@ from django.contrib.auth.models import Group
 from django_filters.rest_framework import DjangoFilterBackend, FilterSet, DateFilter, CharFilter, NumberFilter
 from .serializers import UserSerializer , EventSerializer , PhotoSerializer , commentSerializer, likedPhotoSerializer, downloadedPhotoSerializer, viewedPhotoSerializer
 import hashlib
+from rest_framework_simplejwt.tokens import RefreshToken
 
 from guardian.shortcuts import get_objects_for_user
 from .utils import set_event_perms
@@ -47,7 +46,7 @@ class UserViewSet(viewsets.ModelViewSet):
     queryset = User.objects.all()
     serializer_class = UserSerializer
 
-    authentication_classes = [TokenAuthentication]
+    
     permission_classes = [CreateOnlyPermission]
 
     lookup_field = "userid"
@@ -72,7 +71,7 @@ class UserViewSet(viewsets.ModelViewSet):
 
     @action(detail=False, methods=["post"])
     def login(self, request):
-        # 1) Get email + password from body
+        # 1) Get email + password
         email = request.data.get("email")
         password = request.data.get("password")
 
@@ -85,7 +84,7 @@ class UserViewSet(viewsets.ModelViewSet):
         # 2) Normalize email
         email_norm = email.strip().lower()
 
-        # 3) Find user by email
+        # 3) Find user
         try:
             user = User.objects.get(email__iexact=email_norm)
         except User.DoesNotExist:
@@ -101,24 +100,45 @@ class UserViewSet(viewsets.ModelViewSet):
                 status=status.HTTP_401_UNAUTHORIZED,
             )
 
-        # 5) Block if email not verified (OTP not done yet)
+        # 5) Check email verification
         if not user.is_active:
             return Response(
                 {"error": "Email not verified"},
                 status=status.HTTP_403_FORBIDDEN,
             )
 
-        # 6) Issue DRF token
-        token_obj, _ = Token.objects.get_or_create(user=user)
+        # 6) Generate JWT tokens
+        refresh = RefreshToken.for_user(user)
+        access_token = str(refresh.access_token)
 
-        # 7) Return token + user info
-        return Response(
+        # 7) Prepare response (NO TOKEN IN BODY)
+        response = Response(
             {
-                "token": token_obj.key,
-                "user": UserSerializer(user, context={"request": request}).data,
+                "user": UserSerializer(user, context={"request": request}).data
             },
             status=status.HTTP_200_OK,
         )
+
+        # 8) Set HTTP-only cookies
+        response.set_cookie(
+            key="access",
+            value=access_token,
+            httponly=True,
+            secure=False,      # 🔴 True in production (HTTPS)
+            samesite="Lax",
+            max_age=15 * 60,   # 15 minutes
+        )
+
+        response.set_cookie(
+            key="refresh",
+            value=str(refresh),
+            httponly=True,
+            secure=False,      # 🔴 True in production
+            samesite="Lax",
+            max_age=7 * 24 * 60 * 60,  # 7 days
+        )
+
+        return response
 
     def get_permissions(self):
         if self.request.method in ("GET", "HEAD", "OPTIONS"):
@@ -131,7 +151,7 @@ from .serializers import UserGroupSerializer
 class UserGroupViewSet(viewsets.ModelViewSet):
     queryset = User.objects.all()
     serializer_class = UserGroupSerializer
-    authentication_classes = [TokenAuthentication]
+    
     permission_classes = [IsAuthenticated, IsAdmin]
     lookup_field = "userid"  # or "id" if your pk is id
 
@@ -141,7 +161,7 @@ class UserGroupViewSet(viewsets.ModelViewSet):
 class EventViewSet(viewsets.ModelViewSet):
     queryset = Events.objects.all()
     serializer_class = EventSerializer
-    authentication_classes = [TokenAuthentication]
+    
     pagination_class = LimitOffsetPagination
     page_size = 10
     lookup_field = "eventid"
@@ -232,7 +252,7 @@ class PhotoViewSet(viewsets.ModelViewSet):
     pagination_class = LimitOffsetPagination
     page_size = 10
 
-    authentication_classes = [TokenAuthentication]
+    
     permission_classes = [IsAuthenticated]
 
     search_fields = ["photoDesc", "event__eventname", "uploadedBy__username"]
@@ -334,7 +354,7 @@ class LikedPhotoViewSet(viewsets.ModelViewSet):
     search_fields = ['user__username', 'photo__photoDesc']
     ordering_fields = ['likedAt', 'id']
     ordering = ['-likedAt']   # default: newest first
-    authentication_classes = [TokenAuthentication]
+    
     permission_classes = [IsAuthenticated]  # keep or change as needed
 
 # -------- Comment viewset --------
@@ -348,7 +368,7 @@ class CommentViewSet(viewsets.ModelViewSet):
     search_fields = ['commentText', 'user__username', 'photo__photoDesc']
     ordering_fields = ['commentedAt', 'id']
     ordering = ['-commentedAt']
-    authentication_classes = [TokenAuthentication]
+    
     permission_classes = [IsAuthenticated]  # keep or change as needed
 
 # -------- Download viewset --------
@@ -362,7 +382,7 @@ class DownloadedPhotoViewSet(viewsets.ModelViewSet):
     search_fields = ['user__username', 'photo__photoDesc', 'version']
     ordering_fields = ['downloadedAt', 'id']
     ordering = ['-downloadedAt']
-    authentication_classes = [TokenAuthentication]
+    
     permission_classes = [IsAuthenticated]  # keep or change as needed
 
 # -------- View viewset --------
@@ -376,5 +396,5 @@ class ViewedPhotoViewSet(viewsets.ModelViewSet):
     search_fields = ['user__username', 'photo__photoDesc']
     ordering_fields = ['viewedAt', 'id']
     ordering = ['-viewedAt']
-    authentication_classes = [TokenAuthentication]
+    
     permission_classes = [IsAuthenticated]  # keep or change as needed
