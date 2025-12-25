@@ -257,43 +257,39 @@ class PhotoViewSet(viewsets.ModelViewSet):
 
     @action(detail=False, methods=["post"], url_path="bulk-create")
     def bulk_create(self, request):
-        """
-        Create multiple photos in one call.
-        Body:
-        {
-          "photos": [
-            {
-              "photoDesc": "...",
-              "event": 3,
-              "...": "other Photo fields"
-            },
-            ...
-          ]
-        }
-        Uploader is always set to request.user for each photo.
-        """
-        photos_data = request.data.get("photos", [])
-        if not isinstance(photos_data, list):
-            return Response({"error": "photos must be a list"}, status=status.HTTP_400_BAD_REQUEST)
+        files = request.FILES.getlist("photoFile")
+        descs = request.data.getlist("photoDesc")
+        events = request.data.getlist("event")
+        tags = request.data.getlist("extractedTags")
+
+        if not files:
+            return Response(
+                {"error": "No files received"},
+                status=status.HTTP_400_BAD_REQUEST
+            )
 
         created = []
         errors = []
 
-        for idx, data in enumerate(photos_data):
-            # Make a mutable copy and force uploader to current user
-            item = dict(data)
-            item["uploader"] = request.user.pk
+        for i, file in enumerate(files):
+            data = {
+                "photoFile": file,
+                "photoDesc": descs[i] if i < len(descs) else "",
+                "event": events[i] if i < len(events) else None,
+                "extractedTags": tags[i] if i < len(tags) else [],
+                "uploader": request.user.pk,
+            }
 
-            serializer = self.get_serializer(data=item)
+            serializer = self.get_serializer(data=data)
             if serializer.is_valid():
-                serializer.save()  # perform_create logic is not called here, we set uploader directly
+                serializer.save()
                 created.append(serializer.data)
             else:
-                errors.append({"index": idx, "errors": serializer.errors})
+                errors.append({"index": i, "errors": serializer.errors})
 
         return Response(
             {"created": created, "errors": errors},
-            status=status.HTTP_207_MULTI_STATUS if errors else status.HTTP_201_CREATED,
+            status=status.HTTP_207_MULTI_STATUS if errors else status.HTTP_201_CREATED
         )
 
     @action(detail=False, methods=["post"], url_path="bulk-delete")
