@@ -1,6 +1,6 @@
 from django.urls import path, include
 from rest_framework.routers import DefaultRouter
-from .views import UserViewSet , EventViewSet , PhotoViewSet , ViewedPhotoViewSet
+from .views import UserViewSet , EventViewSet , PhotoViewSet , ViewedPhotoViewSet , logout
 from .views import UserGroupViewSet, LikedPhotoViewSet , CommentViewSet , DownloadedPhotoViewSet 
 from .views_otp import request_email_otp, verify_email_otp
 from .views_otp import me
@@ -24,6 +24,7 @@ urlpatterns = [
     path("auth/request-otp/", request_email_otp),
     path("auth/verify-otp/", verify_email_otp),
     path("me/", me),
+    path("logout/", logout),
 ]
 
 

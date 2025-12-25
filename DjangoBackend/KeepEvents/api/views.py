@@ -144,7 +144,31 @@ class UserViewSet(viewsets.ModelViewSet):
         if self.request.method in ("GET", "HEAD", "OPTIONS"):
             return [ReadOnly()]
         return [IsSelfOrAdmin()]
+    
 
+from rest_framework.decorators import api_view, permission_classes
+
+@api_view(["POST"])
+@permission_classes([IsAuthenticated])
+def logout(request):
+    response = Response(
+        {"detail": "Logged out successfully"},
+        status=status.HTTP_200_OK,
+    )
+
+    # Delete access token cookie
+    response.delete_cookie(
+        key="access",
+        path="/",
+    )
+
+    # Delete refresh token cookie
+    response.delete_cookie(
+        key="refresh",
+        path="/",
+    )
+
+    return response
 
 from .serializers import UserGroupSerializer
 
@@ -290,13 +314,14 @@ class PhotoViewSet(viewsets.ModelViewSet):
 
         created = []
         errors = []
-
+        import json
         for i, file in enumerate(files):
+            extractedTags = json.loads(tags[i]) if i < len(tags) else []
             data = {
                 "photoFile": file,
                 "photoDesc": descs[i] if i < len(descs) else "",
                 "event": events[i] if i < len(events) else None,
-                "extractedTags": tags[i] if i < len(tags) else [],
+                "extractedTags": extractedTags,
                 "uploader": request.user.pk,
             }
 
