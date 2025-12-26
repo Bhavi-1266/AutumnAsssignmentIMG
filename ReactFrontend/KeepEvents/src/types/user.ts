@@ -18,3 +18,13 @@ export interface User {
   groups: number[];
   user_permissions: number[];
 }
+
+export type EditedData = Partial<{
+  first_name: string;
+  last_name: string;
+  userbio: string | null;
+  enrollmentNo: number | null;
+  dept: string | null;
+  batch: number | null;
+}>;
+  

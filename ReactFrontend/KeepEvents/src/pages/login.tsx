@@ -13,9 +13,6 @@ function Login() {
 
     try {
       const data = await login(userEmail, password);
-
-      localStorage.setItem("token", data.token);
-      localStorage.setItem("userId", data.user.userid);
       navigate("/HomePage");
     } catch (err) {
       setError("Invalid credentials");

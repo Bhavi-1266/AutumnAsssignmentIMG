@@ -1,11 +1,11 @@
 import { useEffect, useState } from "react";
 import type { Event } from "../types/event";
 import type { User } from "../types/user";
-import { getMyData } from "../services/user"; // adjust path if needed
 import {  CreateEventApi } from "../services/events";
 import { useNavigate } from "react-router-dom";
 import toast  from "react-hot-toast";
-
+import {getMe}  from "../services/auth";
+import NavBar from "../components/navBar";
 type CreateEventForm = Pick<
   Event,
   | "eventname"
@@ -30,21 +30,34 @@ function CreateEvent() {
   // Logged-in user (event manager / creator)
 
   const [currentUser, setCurrentUser] = useState<User | null>(null);
-
   const navigate = useNavigate();
-  useEffect(() => {
-    const token = localStorage.getItem("token");
-    if (!token) return;
+  const [loading, setLoading] = useState(true);
 
-    getMyData(token)
-      .then((user) => {
-        setCurrentUser(user);
-      })
-      .catch((err) => {
-        console.error(err);
-        setError(err.message);
-      });
+  useEffect(() => {
+    const checkAuth = async () => {
+      try {
+        const data = await getMe();
+        setCurrentUser(data.user);
+      } catch {
+        setCurrentUser(null);
+        navigate("/");
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    checkAuth();
   }, []);
+
+  if (loading) {
+    return <p>Loading...</p>;
+  }
+
+  if (!currentUser) {
+    return <p>Not logged in</p>;
+  }
+
+
 
   const handleChange = (
     e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>
@@ -59,7 +72,7 @@ function CreateEvent() {
     e.preventDefault();
     console.log(form);
 
-    CreateEventApi(localStorage.getItem("token") ?? "", form)
+    CreateEventApi(form)
       .then((data) => {
         console.log(data);
         toast.success("Event created successfully");
@@ -68,11 +81,15 @@ function CreateEvent() {
       })
       .catch((err) => {
         toast.error("Event creation failed");
+
       });
   };
 
   return (
+    <>
+    <NavBar />
     <div className="max-w-md mx-auto mt-10 p-6 bg-white shadow rounded">
+      
       <h2 className="text-lg font-semibold mb-4">Create Event</h2>
 
       <form onSubmit={handleSubmit} className="space-y-3">
@@ -147,6 +164,7 @@ function CreateEvent() {
         </button>
       </form>
     </div>
+  </>
   );
 }
 

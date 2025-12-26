@@ -19,7 +19,7 @@ function LoginPage() {
           displayText="Register"
           onClick={() => navigate("/register")}
         />
-
+  
       </div>
     </div>
   );

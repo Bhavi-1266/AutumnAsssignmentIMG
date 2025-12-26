@@ -5,40 +5,84 @@ import PhotoCard from "../components/PhotoCard.tsx";
 import { useNavigate, useParams } from "react-router-dom";
 import HighlightPhoto from "../components/HighlightPhoto.tsx";
 import CreateCard from "../components/CreateCard.tsx";
-
+import AddPhotosModal from "../components/AddPhotosModal.tsx";
+import type { User } from "../types/user";
+import {getMe} from "../services/auth.ts"
+import NavBar from "../components/navBar.tsx";
 function EventPhotos() {
   const navigate = useNavigate();
   const { eventId } = useParams<{ eventId: string }>();
 
   const [photos, setPhotos] = useState<Photo[]>([]);
   const [selectedPhoto, setSelectedPhoto] = useState<Photo | null>(null);
+
+
+  const [showAddPhotos, setShowAddPhotos] = useState(false);
+
   const [error, setError] = useState<string | null>(null);
+  
+  const [currentUser, setCurrentUser] = useState<User | null>(null); // currentUser
+  const [loading , setLoading] = useState(true);
+  useEffect(() => {
+  if (!eventId) {
+    setError("Invalid event");
+    return;
+  }
+
+  const load = async () => {
+    try {
+      const data = await LoadEventPhotos(Number(eventId));
+
+      // Defensive check
+      if (!data || !Array.isArray(data.results)) {
+        throw new Error("Invalid response format");
+      }
+
+      setPhotos(data.results);
+      setError(null);
+    } catch (err: any) {
+      console.error("Error loading photos:", err);
+
+      // User-friendly error message
+      if (err.message.includes("<!doctype")) {
+        setError("Authentication error. Please log in again.");
+      } else {
+        setError(err.message || "Failed to load photos");
+      }
+    }
+  };
+
+  load();
+}, [eventId, showAddPhotos]);
 
   useEffect(() => {
-    const token = localStorage.getItem("token");
-
-    if (!token) {
-      setError("Not authenticated");
-      return;
+      const checkAuth = async () => {
+        try {
+          const data = await getMe();
+          setCurrentUser(data.user);
+        } catch {
+          setCurrentUser(null);
+          navigate("/");
+        } finally {
+          setLoading(false);
+          
+        }
+      };
+  
+      checkAuth();
+    }, []);
+  
+    if (loading) {
+      return <p>Loading...</p>;
     }
-
-    if (!eventId) {
-      setError("Invalid event");
-      return;
+  
+    if (!currentUser) {
+      return <p>Not logged in</p>;
     }
-
-    LoadEventPhotos(token, Number(eventId))
-      .then((data) => {
-        setPhotos(data.results);
-      })
-      .catch((err: Error) => {
-        console.error("Error loading photos:", err);
-        setError(err.message);
-      });
-  }, [eventId]);
-
+  
   return (
     <div>
+      <NavBar />
       <h1 className="text-xl font-bold text-center p-4">
         Event Photos
       </h1>
@@ -50,7 +94,7 @@ function EventPhotos() {
       )}
 
       {photos.length === 0 && !error ? (
-         <CreateCard ToCreate="Photo" onClick={() => navigate(`/createPhoto/${eventId}`)} />
+         <CreateCard ToCreate="Photo" onClick={() => setShowAddPhotos(true)} />
       ) : (
         <div
           className="
@@ -65,10 +109,10 @@ function EventPhotos() {
             mx-auto
           "
         >
-          <CreateCard ToCreate="Photo" onClick={() => navigate(`/createPhoto/${eventId}`)} />
+          <CreateCard ToCreate="Photo" onClick={() => setShowAddPhotos(true)} />
           {photos.map((photo) => (
             <PhotoCard
-              key={photo.photoId ?? undefined}
+              key={photo.photoId}
               photo={photo}
               onClick={() => setSelectedPhoto(photo)}
             />
@@ -83,6 +127,18 @@ function EventPhotos() {
           onClick={() => setSelectedPhoto(null)}
         />
       )}
+
+      {showAddPhotos && eventId && (
+        <AddPhotosModal
+          eventId={Number(eventId)}
+          onClose={() =>{ 
+            setShowAddPhotos(false)
+
+          }
+          }
+        />
+      )}
+
     </div>
   );
 }

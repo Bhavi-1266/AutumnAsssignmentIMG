@@ -1,4 +1,3 @@
-const API_BASE = "http://127.0.0.1:8000/api";
 
 export async function login(userEmail: string, password: string) {
 
@@ -7,11 +6,12 @@ export async function login(userEmail: string, password: string) {
     password,
   }
   console.log(JSON.stringify(body));
-  const response = await fetch(`${API_BASE}/users/login/`, {
+  const response = await fetch(`/api/users/login/`, {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
     },
+    credentials: "include", // for jwt tokens 
     body: JSON.stringify(body),
   });
 
@@ -23,6 +23,20 @@ export async function login(userEmail: string, password: string) {
   
 }
 
+export async function logout() {
+  const response = await fetch("/api/logout/", {
+    method: "POST",
+    credentials: "include", // 🔥 required
+  });
+
+  if (!response.ok) {
+    throw new Error("Logout failed");
+  }
+
+  return response.json();
+}
+
+
 
 export async function register(userEmail: string, password: string , name: string) {
 
@@ -33,7 +47,7 @@ export async function register(userEmail: string, password: string , name: strin
     
   }
   console.log(JSON.stringify(body));
-  const response = await fetch(`${API_BASE}/users/`, {
+  const response = await fetch(`/api/users/`, {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
@@ -54,7 +68,7 @@ export async function resendOTP(userEmail: string) {
   const body = {
     email: userEmail,
   }
-  const response = await fetch(`${API_BASE}/auth/request-otp/`, {
+  const response = await fetch(`/auth/request-otp/`, {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
@@ -74,7 +88,7 @@ export async function verifyOTP(userEmail: string, otp: string) {
     email: userEmail,
     code : otp,
   }
-  const response = await fetch(`${API_BASE}/auth/verify-otp/`, {
+  const response = await fetch(`/auth/verify-otp/`, {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
@@ -87,4 +101,19 @@ export async function verifyOTP(userEmail: string, otp: string) {
   }
   return response.json();
 
-} 
+}
+
+export async function getMe() {
+  const response = await fetch(  "/api/me/", {
+    method: "GET",
+    credentials: "include", // 🔥 REQUIRED for cookies
+  });
+
+  if (!response.ok) {
+    throw new Error("Not authenticated");
+  }
+
+  return response.json();
+}
+
+

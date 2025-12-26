@@ -7,6 +7,10 @@ import { BrowserRouter } from "react-router-dom";
 import EventPhotos from "./pages/eventPhotos";
 import CreateEvent from "./pages/createEvent";
 import { Toaster } from "react-hot-toast";
+import MyActivityPage from "./pages/MyActivityPage";
+import MyInfoPage from "./pages/MyInfoPage";
+import EventsPage from "./pages/EventsPage";
+import PhotosPage from "./pages/PhotosPage";
 
 function App() {
   return (
@@ -18,8 +22,12 @@ function App() {
         <Route path="/login" element={<Login />} />
         <Route path="/register" element={<Register />} />
         <Route path="/HomePage" element={<HomePage />} />
-        <Route path="/events/:eventId" element={<EventPhotos />} />
-        <Route path="createEvent" element={< CreateEvent/>} />
+        <Route path="/Events/:eventId" element={<EventPhotos />} />
+        <Route path="EventsCreate" element={< CreateEvent/>} />
+        <Route path="/Activity" element={<MyActivityPage />} />
+        <Route path="/Profile" element={<MyInfoPage />} />
+        <Route path="/Events" element={<EventsPage />} />
+        <Route path="/Photos" element={<PhotosPage />} />
       </Routes>
     </>
   );

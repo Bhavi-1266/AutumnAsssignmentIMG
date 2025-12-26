@@ -67,13 +67,7 @@ function Register() {
 
     verifyOTP(userEmail, otp)
       .then((data) => {
-        if (data.token) {
-          localStorage.setItem("token", data.token);
-          localStorage.setItem("userId", data.userid);
-          navigate("/HomePage");
-        } else {
-          setError("Registration failed try again later.");
-        }
+        navigate("/HomePage");
       })
       .catch((err) => {
         console.log(err);

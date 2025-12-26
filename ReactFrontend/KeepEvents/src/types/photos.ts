@@ -16,3 +16,9 @@ export interface Photo {
     event: Event | null;
     uploadedBy: User | null;
 }
+
+export interface PhotoDraft {
+  file: File;
+  photoDesc: string;
+  extractedTags: string[];
+}

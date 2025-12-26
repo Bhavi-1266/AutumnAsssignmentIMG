@@ -1,26 +1,42 @@
-const API_BASE = "http://127.0.0.1:8000/api";
+import type { EditedData } from "../types/user";
 
-import type { User } from "../types/user";
-
-export async function getMyData(token: string): Promise<User> {
-  const userId = localStorage.getItem("userId");
-
-  if (!userId) {
-    throw new Error("User ID not found in localStorage");
-  }
-
-  const response = await fetch(`${API_BASE}/users/${userId}/`, {
-    method: "GET",
+export async function patchUserData(
+  userid: number,
+  data: EditedData
+) {
+  const response = await fetch(`/api/users/${userid}/`, {
+    method: "PATCH",
     headers: {
-      Authorization: `Token ${token}`,
       "Content-Type": "application/json",
     },
+    body: JSON.stringify(data),
+    credentials: "include",
   });
 
   if (!response.ok) {
-    throw new Error("Cannot fetch user info");
+    throw new Error("Failed to update user data");
   }
 
-  const data: User = await response.json();
-  return data;
+  return response.json();
 }
+
+export async function patchUserProfileImage(
+  userid: number,
+  file: File
+) {
+  const formData = new FormData();
+  formData.append("userProfile", file);
+
+  const response = await fetch(`/api/users/${userid}/`, {
+    method: "PATCH",
+    body: formData,
+    credentials: "include",
+  });
+
+  if (!response.ok) {
+    throw new Error("Failed to update profile image");
+  }
+
+  return response.json();
+}
+
