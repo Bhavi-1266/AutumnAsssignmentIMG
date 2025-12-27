@@ -14,6 +14,8 @@ from rest_framework_simplejwt.tokens import RefreshToken
 from guardian.shortcuts import get_objects_for_user
 from .utils import set_event_perms
 
+from django.db.models import Q
+
 
 from rest_framework.pagination import LimitOffsetPagination # Or PageNumberPagination   
 from users.models import users
@@ -245,72 +247,102 @@ class EventViewSet(viewsets.ModelViewSet):
     
 
 class PhotoFilter(FilterSet):
-    # filter by uploader user id: ?uploader=3
+    # unified search (text + tags + location)
+    search = CharFilter(method="filter_search")
+
     uploader = NumberFilter(field_name="uploadedBy__id", lookup_expr="exact")
-    # single tag: ?tag=fun
     tag = CharFilter(method="filter_by_tag")
-    # exact date (date portion of uploadDate): ?date=2025-12-01
     date = DateFilter(field_name="uploadDate", lookup_expr="date")
-    # range: ?date_after=YYYY-MM-DD & ?date_before=YYYY-MM-DD
     date_after = DateFilter(field_name="uploadDate", lookup_expr="date__gte")
     date_before = DateFilter(field_name="uploadDate", lookup_expr="date__lte")
     event = NumberFilter(field_name="event_id")
 
     class Meta:
         model = Photo
-        fields = [ "uploader", "tag", "date", "date_after", "date_before", "event"]  # custom filters only
+        fields = [
+            "search",
+            "uploader",
+            "tag",
+            "date",
+            "date_after",
+            "date_before",
+            "event",
+        ]
+
+    def filter_search(self, queryset, name, value):
+        return queryset.filter(
+            Q(photoDesc__icontains=value) |
+            Q(event__eventname__icontains=value) |
+            Q(event__eventlocation__icontains=value) |
+            Q(uploadedBy__username__icontains=value) |
+            Q(extractedTags__contains=[value])
+        )
+
     def filter_by_tag(self, queryset, name, value):
-        # Assumes extractedTags is a JSONField storing a list of strings.
-        # PostgreSQL: list contains exact value
-        # Django will translate extractedTags__contains=[value] to JSON containment
         return queryset.filter(extractedTags__contains=[value])
+
 
 
 class PhotoViewSet(viewsets.ModelViewSet):
     """
     Photo viewset with:
-      - filtering (uploader, tag, date range)
+      - filtering (search, uploader, tag, date range, event)
+      - ordering
       - single create/update/delete
       - bulk-create
       - bulk-delete
+      - like / unlike
     """
+
     queryset = Photo.objects.all().select_related("event", "uploadedBy")
     serializer_class = PhotoSerializer
 
-    filter_backends = [DjangoFilterBackend, filters.SearchFilter, filters.OrderingFilter]
+    # Filtering & ordering
+    filter_backends = [
+        DjangoFilterBackend,
+        filters.OrderingFilter,
+    ]
     filterset_class = PhotoFilter
+
+    ordering_fields = ["uploadDate", "photoid"]
+    ordering = ["-uploadDate"]
 
     pagination_class = LimitOffsetPagination
     page_size = 10
 
-    
     permission_classes = [IsAuthenticated]
 
-    search_fields = ["photoDesc", "event__eventname", "uploadedBy__username"]
-    ordering_fields = ["uploadDate", "photoid"]
-    ordering = ["-uploadDate"]
+    # 🔑 IMPORTANT: pass request to serializer (for isLikedByCurrentUser)
+    def get_serializer_context(self):
+        context = super().get_serializer_context()
+        context["request"] = self.request
+        return context
 
+    # Permissions per action
     def get_permissions(self):
-        # Anyone authenticated can view photos
         if self.action in ["list", "retrieve"]:
             return [IsAuthenticated()]
-        # Single create/update/delete require object-level permissions
+
         if self.action in ["create", "update", "partial_update", "destroy"]:
             return [IsAuthenticated(), IsPhotoOwnerEventOwnerOrAdmin()]
-        # Bulk actions: use same permission as single create/delete
-        if self.action in ["bulk_create", "bulk_delete"]:
+
+        if self.action in ["bulk_create", "bulk_delete", "toggle_like"]:
             return [IsAuthenticated()]
+
         return super().get_permissions()
 
+    # Single create
     def perform_create(self, serializer):
-        # Single create: uploader is always the request user
-        serializer.save(uploader=self.request.user)
+        serializer.save(uploadedBy=self.request.user)
 
+    # -------------------------
+    # BULK CREATE
+    # -------------------------
     @action(detail=False, methods=["post"], url_path="bulk-create")
     def bulk_create(self, request):
         files = request.FILES.getlist("photoFile")
         descs = request.data.getlist("photoDesc")
-        events = request.data.getlist("event")
+        event_ids = request.data.getlist("event_id")
         tags = request.data.getlist("extractedTags")
 
         if not files:
@@ -321,20 +353,22 @@ class PhotoViewSet(viewsets.ModelViewSet):
 
         created = []
         errors = []
+
         import json
+
         for i, file in enumerate(files):
             extractedTags = json.loads(tags[i]) if i < len(tags) else []
+
             data = {
                 "photoFile": file,
                 "photoDesc": descs[i] if i < len(descs) else "",
-                "event": events[i] if i < len(events) else None,
+                "event_id": event_ids[i] if i < len(event_ids) else None,  # ✅ FIX
                 "extractedTags": extractedTags,
-                "uploader": request.user.pk,
             }
 
             serializer = self.get_serializer(data=data)
             if serializer.is_valid():
-                serializer.save()
+                serializer.save(uploadedBy=request.user)  # ✅ FIX
                 created.append(serializer.data)
             else:
                 errors.append({"index": i, "errors": serializer.errors})
@@ -344,16 +378,18 @@ class PhotoViewSet(viewsets.ModelViewSet):
             status=status.HTTP_207_MULTI_STATUS if errors else status.HTTP_201_CREATED
         )
 
+    # -------------------------
+    # BULK DELETE
+    # -------------------------
     @action(detail=False, methods=["post"], url_path="bulk-delete")
     def bulk_delete(self, request):
-        """
-        Delete multiple photos by ID list.
-        Body: {"photo_ids": [1, 2, 3]}
-        Each photo is deleted only if user passes IsPhotoOwnerEventOwnerOrAdmin.
-        """
         ids = request.data.get("photo_ids", [])
+
         if not isinstance(ids, list):
-            return Response({"error": "photo_ids must be a list"}, status=status.HTTP_400_BAD_REQUEST)
+            return Response(
+                {"error": "photo_ids must be a list"},
+                status=status.HTTP_400_BAD_REQUEST
+            )
 
         photos = Photo.objects.filter(pk__in=ids).select_related("event", "uploadedBy")
         deleted = []
@@ -373,6 +409,31 @@ class PhotoViewSet(viewsets.ModelViewSet):
             status=status.HTTP_200_OK,
         )
 
+    # -------------------------
+    # LIKE / UNLIKE
+    # -------------------------
+    @action(detail=True, methods=["post"], url_path="toggle-like")
+    def toggle_like(self, request, pk=None):
+        photo = self.get_object()
+        user = request.user
+
+        like = likedPhoto.objects.filter(photo=photo, user=user).first()
+
+        if like:
+            like.delete()
+            photo.likecount = max(photo.likecount - 1, 0)
+            liked = False
+        else:
+            likedPhoto.objects.create(photo=photo, user=user)
+            photo.likecount += 1
+            liked = True
+
+        photo.save(update_fields=["likecount"])
+
+        return Response(
+            {"liked": liked, "likes": photo.likecount},
+            status=status.HTTP_200_OK,
+        )
 
 
 # -------- Like viewset --------

@@ -59,6 +59,9 @@ class Photo(models.Model):
         default=0
     )
 
+    
+
+
     def __str__(self):
         desc = self.photoDesc[:20] if self.photoDesc else ""
         return f"Photo {self.photoid}: {desc}"
@@ -80,7 +83,7 @@ class likedPhoto(models.Model):
     user = models.ForeignKey(
         settings.AUTH_USER_MODEL,
         on_delete=models.CASCADE,
-        related_name='liked_photos'
+        related_name='photo_likes'
     )
     likedAt = models.DateTimeField(
         auto_now_add=True

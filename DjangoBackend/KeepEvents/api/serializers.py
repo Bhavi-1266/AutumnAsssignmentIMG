@@ -10,7 +10,6 @@ from django.contrib.auth.models import Group
 from api.utils import create_and_send_email_otp
 from django.db import models
 
-
 User = get_user_model()
 
 class UserSerializer(serializers.ModelSerializer):
@@ -128,12 +127,54 @@ class EventSerializer(serializers.ModelSerializer):
             return obj.eventCoverPhoto.url
         return None 
 
+
 class PhotoSerializer(serializers.ModelSerializer):
+    likes = serializers.IntegerField(source="likecount", read_only=True)
+    isLikedByCurrentUser = serializers.SerializerMethodField()
+    event = EventSerializer(read_only=True)        
+    uploadedBy = UserSerializer(read_only=True)
+
+    event_id = serializers.PrimaryKeyRelatedField(
+        source="event",
+        queryset=Events.objects.all(),
+        write_only=True,
+    )
+
     class Meta:
         model = Photo
-        fields = '__all__'
-        read_only_fields = ('photoid', 'uploadDate')
-    
+        fields = [
+            "photoid",
+            "photoFile",
+            "photoDesc",
+            "uploadDate",
+
+            # ✅ KEEP THESE (your point was correct)
+            "extractedTags",
+            "photoMeta",
+
+            # counters
+            "likes",
+            "viewcount",
+            "downloadcount",
+            "commentcount",
+
+            # relations
+            "event",
+            "uploadedBy",
+            "event_id",
+
+            # per-user flag
+            "isLikedByCurrentUser",
+        ]
+
+    def get_isLikedByCurrentUser(self, obj):
+        request = self.context.get("request")
+        if not request or not request.user.is_authenticated:
+            return False
+
+        # uses likedPhoto via related_name="likes"
+        return obj.likes.filter(user=request.user).exists()
+  
 
 class likedPhotoSerializer(serializers.ModelSerializer):
     class Meta:
