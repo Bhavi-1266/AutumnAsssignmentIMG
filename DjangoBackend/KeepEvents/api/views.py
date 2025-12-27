@@ -190,8 +190,15 @@ class EventViewSet(viewsets.ModelViewSet):
     page_size = 10
     lookup_field = "eventid"
     filter_backends = [DjangoFilterBackend, filters.SearchFilter, filters.OrderingFilter]
-    search_fields = ["eventname", "eventlocation", "eventdesc"]
-    filterset_fields = ["eventdate", "eventCreator", "eventlocation", "eventtime"]
+    search_fields = ["eventname", "eventlocation", "eventdesc" , "eventlocation"]
+    filterset_fields = {
+          "eventdate": ["exact", "gte", "lte", "range"],
+        "eventCreator": ["exact"],
+        "eventlocation": ["exact", "in"],
+        "eventtime": ["exact"],
+        "visibility": ["exact"],
+    }
+
     ordering_fields = ["eventname", "eventdate", "eventtime", "eventlocation"]
     ordering = ["eventdate", "eventname", "eventtime", "eventlocation"]
 
