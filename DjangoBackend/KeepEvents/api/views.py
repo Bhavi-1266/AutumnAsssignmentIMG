@@ -436,6 +436,72 @@ class PhotoViewSet(viewsets.ModelViewSet):
         )
 
 
+
+
+from django.db.models import Sum, Count, Min
+from collections import Counter
+
+@api_view(["GET"])
+@permission_classes([IsAuthenticated])
+def my_activity_summary(request):
+    user = request.user
+    photos = Photo.objects.filter(uploadedBy=user).select_related("event")
+
+    # ---- BASIC STATS ----
+    stats = photos.aggregate(
+        total_photos=Count("photoid"),
+        total_likes=Sum("likecount"),
+        total_views=Sum("viewcount"),
+        total_downloads=Sum("downloadcount"),
+        total_comments=Sum("commentcount"),
+        first_upload_date=Min("uploadDate"),
+    )
+
+    # ---- TOP TAGS ----
+    tag_counter = Counter()
+    for p in photos:
+        if p.extractedTags:
+            tag_counter.update(p.extractedTags)
+
+    top_tags = [
+        {"tag": tag, "count": count}
+        for tag, count in tag_counter.most_common(10)
+    ]
+
+    # ---- TOP LOCATIONS (via events) ----
+    location_counter = Counter()
+    for p in photos:
+        if p.event and p.event.eventlocation:
+            location_counter[p.event.eventlocation] += 1
+
+    top_locations = [
+        {"location": loc, "count": count}
+        for loc, count in location_counter.most_common(5)
+    ]
+
+    # ---- MAJOR EVENTS ----
+    major_events = (
+        photos.values("event__eventid", "event__eventname")
+        .annotate(photo_count=Count("photoid"))
+        .order_by("-photo_count")[:5]
+    )
+
+    return Response({
+        "user": {
+            "username": user.username,
+            "email": user.email,
+        },
+        "stats": stats,
+        "activity": {
+            "top_tags": top_tags,
+            "top_locations": top_locations,
+            "major_events": list(major_events),
+        },
+    })
+
+
+
+
 # -------- Like viewset --------
 class LikedPhotoViewSet(viewsets.ModelViewSet):
     queryset = likedPhoto.objects.all().select_related('user', 'photo')

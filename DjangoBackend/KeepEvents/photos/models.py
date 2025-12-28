@@ -58,10 +58,6 @@ class Photo(models.Model):
     commentcount = models.PositiveIntegerField(
         default=0
     )
-
-    
-
-
     def __str__(self):
         desc = self.photoDesc[:20] if self.photoDesc else ""
         return f"Photo {self.photoid}: {desc}"
