@@ -176,15 +176,24 @@ class PhotoSerializer(serializers.ModelSerializer):
         return obj.likes.filter(user=request.user).exists()
   
 
+class UserForLikesCommentsSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = users
+        fields = ['userid', 'username']
+
+
 class likedPhotoSerializer(serializers.ModelSerializer):
+    user = UserForLikesCommentsSerializer(read_only=True)
     class Meta:
         model = likedPhoto
         fields = '__all__'
 
 class commentSerializer(serializers.ModelSerializer):
+    user = UserForLikesCommentsSerializer(read_only=True)
     class Meta:
         model = comment
         fields = '__all__'
+        read_only_fields = ['user']
 
 class downloadedPhotoSerializer(serializers.ModelSerializer):
     class Meta:

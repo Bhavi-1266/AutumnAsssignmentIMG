@@ -94,6 +94,7 @@ class likedPhoto(models.Model):
 
 
 class comment(models.Model):
+    id = models.AutoField(primary_key=True)
     photo = models.ForeignKey(
         Photo,
         on_delete=models.CASCADE,

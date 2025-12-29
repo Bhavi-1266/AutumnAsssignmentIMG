@@ -60,3 +60,4 @@ class IsPhotoOwnerEventOwnerOrAdmin(BasePermission):
         if event is not None and getattr(event, "eventCreator", None) == user:
             return True
         return False
+

@@ -529,6 +529,11 @@ class CommentViewSet(viewsets.ModelViewSet):
     ordering = ['-commentedAt']
     
     permission_classes = [IsAuthenticated]  # keep or change as needed
+    def perform_create(self, serializer):
+        # automatically set the user to the authenticated user
+        serializer.save(user=self.request.user)
+        
+
 
 # -------- Download viewset --------
 class DownloadedPhotoViewSet(viewsets.ModelViewSet):
