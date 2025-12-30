@@ -61,3 +61,7 @@ class IsPhotoOwnerEventOwnerOrAdmin(BasePermission):
             return True
         return False
 
+
+class IsIMGMember(BasePermission):
+    def has_permission(self, request, view):
+        return is_img_member(request.user)

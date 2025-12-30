@@ -2,7 +2,7 @@ from rest_framework import viewsets, status, filters
 from rest_framework.decorators import action
 from rest_framework.response import Response
 from rest_framework.permissions import BasePermission , IsAuthenticated , AllowAny
-from .permissions import IsAdmin , ReadOnly , IsSelfOrAdmin , IsEventOwnerOrAdmin , IsPhotoOwnerEventOwnerOrAdmin
+from .permissions import IsAdmin , ReadOnly , IsSelfOrAdmin , IsEventOwnerOrAdmin , IsPhotoOwnerEventOwnerOrAdmin  , IsIMGMember
 from .permissions import is_admin , is_img_member
 from django.contrib.auth import get_user_model 
 from django.contrib.auth.models import Group
@@ -333,6 +333,7 @@ class PhotoViewSet(viewsets.ModelViewSet):
 
     # Single create
     def perform_create(self, serializer):
+        permission_classes = [IsAuthenticated , IsAdmin , IsIMGMember]
         serializer.save(uploadedBy=self.request.user)
 
     # -------------------------
@@ -340,6 +341,7 @@ class PhotoViewSet(viewsets.ModelViewSet):
     # -------------------------
     @action(detail=False, methods=["post"], url_path="bulk-create")
     def bulk_create(self, request):
+        permission_classes = [IsAuthenticated , IsAdmin , IsIMGMember]
         files = request.FILES.getlist("photoFile")
         descs = request.data.getlist("photoDesc")
         event_ids = request.data.getlist("event_id")
@@ -532,7 +534,7 @@ class CommentViewSet(viewsets.ModelViewSet):
     def perform_create(self, serializer):
         # automatically set the user to the authenticated user
         serializer.save(user=self.request.user)
-        
+
 
 
 # -------- Download viewset --------

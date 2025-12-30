@@ -181,19 +181,26 @@ class UserForLikesCommentsSerializer(serializers.ModelSerializer):
         model = users
         fields = ['userid', 'username']
 
+class PhotoForLikesCommentsSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Photo
+        fields = ['photoid', 'photoFile' , 'likecount']
 
 class likedPhotoSerializer(serializers.ModelSerializer):
     user = UserForLikesCommentsSerializer(read_only=True)
+    photo = PhotoForLikesCommentsSerializer( read_only=True)
     class Meta:
         model = likedPhoto
         fields = '__all__'
+        read_only_fields = ['user', 'photo']
 
 class commentSerializer(serializers.ModelSerializer):
     user = UserForLikesCommentsSerializer(read_only=True)
+    photo = PhotoForLikesCommentsSerializer( read_only=True)
     class Meta:
         model = comment
         fields = '__all__'
-        read_only_fields = ['user']
+        read_only_fields = ['user', 'photo']
 
 class downloadedPhotoSerializer(serializers.ModelSerializer):
     class Meta:
