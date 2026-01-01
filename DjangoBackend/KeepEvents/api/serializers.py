@@ -18,55 +18,54 @@ class UserSerializer(serializers.ModelSerializer):
         fields = '__all__'
         extra_kwargs = {
             'password': {'write_only': True}, 
-            'token': {'write_only': True} ,
             "username": {"validators": []},  # 🔴 disable default UniqueValidator
             "email": {"validators": []},  # 🔴 disable default UniqueValidator
-                        }
+                         }
     
-    def create(self, validated_data):
-        password = validated_data.pop("password", None)
+    # def create(self, validated_data):
+    #     password = validated_data.pop("password", None)
 
-        username = validated_data.get("username")
-        email = validated_data.get("email")
+    #     username = validated_data.get("username")
+    #     email = validated_data.get("email")
 
-        # Check if user already exists
-        existing_user = users.objects.filter(
-            models.Q(username=username) | models.Q(email=email)
-        ).first()
+    #     # Check if user already exists
+    #     existing_user = users.objects.filter(
+    #         models.Q(username=username) | models.Q(email=email)
+    #     ).first()
 
-        if existing_user:
-            errors = {}
+    #     if existing_user:
+    #         errors = {}
 
-            if existing_user.username == username:
-                errors["username"] = ["User with this username already exists."]
+    #         if existing_user.username == username:
+    #             errors["username"] = ["User with this username already exists."]
 
-            if existing_user.email == email:
-                errors["email"] = ["User with this email already exists."]
+    #         if existing_user.email == email:
+    #             errors["email"] = ["User with this email already exists."]
 
-            # include current active status
-            if not existing_user.is_active and password:
-                existing_user.password = make_password(password)
-                existing_user.save(update_fields=["password"])
+    #         # include current active status
+    #         if not existing_user.is_active and password:
+    #             existing_user.password = make_password(password)
+    #             existing_user.save(update_fields=["password"])
 
-            errors["is_active"] = existing_user.is_active
-
-
-            raise serializers.ValidationError(errors)
-
-        # Create new user
-        user = users.objects.create(**validated_data)
-
-        if password:
-            user.set_password(password)
-            user.is_active = False       # block until OTP verification
-            user.save(update_fields=["password", "is_active"])
-
-            # Send OTP email
-            create_and_send_email_otp(user)
-
-        return user
+    #         errors["is_active"] = existing_user.is_active
 
 
+    #         raise serializers.ValidationError(errors)
+
+    #     # Create new user
+    #     user = users.objects.create(**validated_data)
+
+    #     if password:
+    #         user.set_password(password)
+    #         user.is_active = False       # block until OTP verification
+    #         user.save(update_fields=["password", "is_active"])
+
+    #         # Send OTP email
+    #         create_and_send_email_otp(user)
+
+    #     return user
+
+    
 
     def update(self, instance, validated_data):
         password = validated_data.pop('password', None)
@@ -77,6 +76,50 @@ class UserSerializer(serializers.ModelSerializer):
         instance.save()
         return instance
 
+class RegisterSerializer(serializers.ModelSerializer):
+    password = serializers.CharField(write_only=True, required=True)
+
+    class Meta:
+        model = users
+        fields = ["email", "username", "password"]
+        extra_kwargs = {
+            'password': {'write_only': True}, 
+            "username": {"validators": []},  # 🔴 disable default UniqueValidator
+            "email": {"validators": []},  # 🔴 disable default UniqueValidator
+                         }
+
+    def create(self, validated_data):
+        
+        password = validated_data.pop("password")
+
+        username = validated_data.get("username")
+        email = validated_data.get("email")
+
+        existing_user = users.objects.filter(
+            models.Q(username=username) | models.Q(email=email)
+        ).first()
+
+        if existing_user:
+            errors = {}
+            if existing_user.username == username:
+                errors["username"] = ["User with this username already exists."]
+            if existing_user.email == email:
+                errors["email"] = ["User with this email already exists."]
+            errors["is_active"] = existing_user.is_active
+            raise serializers.ValidationError(errors)
+
+        user = users.objects.create(**validated_data)
+        user.set_password(password)
+        user.is_active = False
+        user.save(update_fields=["password", "is_active"])
+
+        create_and_send_email_otp(user)
+        return user
+
+
+ 
+
+from .utils import get_user_role_for_event  
 
 class EventSerializer(serializers.ModelSerializer):
     eventCreator = serializers.PrimaryKeyRelatedField(
@@ -89,10 +132,12 @@ class EventSerializer(serializers.ModelSerializer):
 
     # visibility field MUST be here, before Meta:
     visibility = serializers.ChoiceField(
-        choices=[("admin", "Admin"), ("img", "IMG Member"), ("public", "Public")],
+        choices=[("admin", "Admin"), ("img", "IMG Member"), ("public", "Public") , ("private", "Private")],
         required=False,
-        default="public",
+        default="private",
     )
+
+    myrole = serializers.SerializerMethodField()
 
     class Meta:
         model = Events
@@ -108,6 +153,7 @@ class EventSerializer(serializers.ModelSerializer):
             "eventCreator",
             "eventCreator_detail",
             "visibility",              # make sure it's included here
+            "myrole",
         )
         read_only_fields = ("eventid", "eventCoverPhoto_url", "eventCreator_detail")
         extra_kwargs = {
@@ -126,6 +172,12 @@ class EventSerializer(serializers.ModelSerializer):
                 return request.build_absolute_uri(obj.eventCoverPhoto.url)
             return obj.eventCoverPhoto.url
         return None 
+    def get_myrole(self, obj):
+        request = self.context.get("request")
+        if not request:
+            return None
+
+        return get_user_role_for_event(request.user, obj)
 
 
 class PhotoSerializer(serializers.ModelSerializer):

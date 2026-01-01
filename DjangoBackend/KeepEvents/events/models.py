@@ -1,5 +1,6 @@
 from django.db import models
 from django.conf import settings
+import uuid
 # Create your models here.
 class Events(models.Model):
     eventid = models.AutoField(primary_key=True)
@@ -16,8 +17,9 @@ class Events(models.Model):
             ("admin", "Admin"),
             ("img", "IMG Member"),
             ("public", "Public"),
+            ("private", "Private"),
         ),
-        default="public",
+        default="private",
     )
 
     class Meta:
@@ -29,7 +31,23 @@ class Events(models.Model):
             ("view_event_obj", "Can view this event object"),
             ("change_event_obj", "Can change this event object"),
             ("delete_event_obj", "Can delete this event object"),
+            ("invite_event_obj", "Can invite to this event object"),
         )
 
     def __str__(self):
         return self.eventname
+
+
+class EventInvite(models.Model):
+    ROLE_CHOICES = (
+        ("viewer", "Viewer"),
+        ("editor", "Editor"),
+    )
+
+    event = models.ForeignKey(Events, on_delete=models.CASCADE)
+    role = models.CharField(max_length=10, choices=ROLE_CHOICES)
+
+    token = models.UUIDField(unique=True , default=uuid.uuid4, editable=False)
+    expires_at = models.DateTimeField(null=True, blank=True)
+    is_active = models.BooleanField(default=True)
+    

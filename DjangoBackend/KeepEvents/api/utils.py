@@ -2,6 +2,9 @@
 from guardian.shortcuts import assign_perm, remove_perm
 from django.contrib.auth.models import Group
 from django.contrib.auth import get_user_model
+from events.models import Events , EventInvite
+from django.shortcuts import get_object_or_404
+from rest_framework.response import Response
 
 User = get_user_model()
 
@@ -14,24 +17,33 @@ def set_event_perms(event, visibility, extra_user_ids=None):
     img_group = Group.objects.get(name="IMG Member")
     public_group = Group.objects.get(name="Public")
 
+    
     # Clear old group perms on this event
-    for g in [admin_group, img_group, public_group]:
-        remove_perm("view_event_obj", g, event)
-        remove_perm("change_event_obj", g, event)
-        remove_perm("delete_event_obj", g, event)
+    # for g in [admin_group, img_group, public_group]:
+    #     remove_perm("view_event_obj", g, event)
+    #     remove_perm("change_event_obj", g, event)
+    #     remove_perm("delete_event_obj", g, event)
 
-    # Base: Admin can always view/change/delete
-    assign_perm("view_event_obj", admin_group, event)
-    assign_perm("change_event_obj", admin_group, event)
-    assign_perm("delete_event_obj", admin_group, event)
 
-    if visibility == "img":
-        assign_perm("view_event_obj", img_group, event)
+    # if visibility == "private":
+    #     return
+    # # Base: Admin can always view/change/delete
+    # if visibility == "admin":
+    #     assign_perm("view_event_obj", admin_group, event)
+    #     assign_perm("change_event_obj", admin_group, event)
+    #     assign_perm("delete_event_obj", admin_group, event)
 
-    if visibility == "public":
-        assign_perm("view_event_obj", img_group, event)
-        assign_perm("view_event_obj", public_group, event)
+    # if visibility == "img":
+    #     assign_perm("view_event_obj", admin_group, event)
+    #     assign_perm("change_event_obj", admin_group, event)
+    #     assign_perm("delete_event_obj", admin_group, event)
+    #     assign_perm("view_event_obj", img_group, event)
 
+    # if visibility == "public":
+    #     assign_perm("view_event_obj", img_group, event)
+    #     assign_perm("view_event_obj", public_group, event)
+    #     assign_perm("view_event_obj", admin_group, event)
+    
     # Optional per-user direct view perms
     if extra_user_ids:
         for uid in extra_user_ids:
@@ -40,6 +52,81 @@ def set_event_perms(event, visibility, extra_user_ids=None):
             except User.DoesNotExist:
                 continue
             assign_perm("view_event_obj", u, event)
+
+
+def CreateEventPerms(event, visibility, user):
+
+    assign_perm("view_event_obj", user, event)
+    assign_perm("change_event_obj", user, event)
+    assign_perm("delete_event_obj", user, event)
+    assign_perm("invite_event_obj", user, event)
+
+    admin_group = Group.objects.get(name="Admin")
+    img_group = Group.objects.get(name="IMG Member")
+    public_group = Group.objects.get(name="Public")
+
+
+    if visibility == "private":
+        return ; 
+    if visibility == "admin":
+        assign_perm("view_event_obj", admin_group, event)
+        assign_perm("change_event_obj", admin_group, event)
+        assign_perm("delete_event_obj", admin_group, event)
+        assign_perm("invite_event_obj", admin_group, event)
+
+    if visibility == "img":
+        assign_perm("view_event_obj", img_group, event)
+        assign_perm("view_event_obj", admin_group, event)
+        assign_perm("change_event_obj", admin_group, event)
+        assign_perm("delete_event_obj", admin_group, event)
+        assign_perm("invite_event_obj", admin_group, event)
+
+    if visibility == "public":
+        assign_perm("view_event_obj", public_group, event)
+        assign_perm("view_event_obj", admin_group, event)
+        assign_perm("view_event_obj", img_group, event)
+
+
+
+ROLE_PERMISSIONS = {
+    "viewer": ["view_event_obj"],
+    "editor": ["view_event_obj", "change_event_obj", "invite_event_obj"],
+}
+
+def get_user_role_for_event(user, event):
+    if not user.is_authenticated:
+        return None
+
+    if event.eventCreator == user:
+        return "owner"
+
+    if user.has_perm("events.change_event_obj", event):
+        return "editor"
+
+    if user.has_perm("events.view_event_obj", event):
+        return "viewer"
+    
+    return None
+ 
+def accept_invite(request, token):
+    invite = get_object_or_404(
+        EventInvite,
+        token=token,
+        is_active=True
+    )
+
+    if invite.expires_at and invite.expires_at < timezone.now():
+        return Response({"error": "Invite expired"}, status=400)
+
+    
+    for perm in ROLE_PERMISSIONS[invite.role]:  
+        assign_perm(perm, request.user, invite.event)
+
+    invite.is_active = False
+    invite.save()
+
+    return Response({"status": "joined"})
+
 
 
 import random

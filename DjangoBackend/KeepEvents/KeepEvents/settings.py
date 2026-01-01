@@ -217,7 +217,7 @@ SIMPLE_JWT = {
      "USER_ID_FIELD": "userid",     
     "USER_ID_CLAIM": "user_id",
 
-    "ACCESS_TOKEN_LIFETIME": timedelta(minutes=15),
+    "ACCESS_TOKEN_LIFETIME": timedelta(minutes=55),
     "REFRESH_TOKEN_LIFETIME": timedelta(days=7),
 
     "ROTATE_REFRESH_TOKENS": True,
@@ -340,3 +340,5 @@ CORS_ALLOW_HEADERS = [
     'x-csrftoken',       # Required for CSRF protection
     'x-requested-with',
 ]
+
+FRONTEND_URL = "http://localhost:5173"

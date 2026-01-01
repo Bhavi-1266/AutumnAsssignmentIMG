@@ -7,8 +7,11 @@ from .permissions import is_admin , is_img_member
 from django.contrib.auth import get_user_model 
 from django.contrib.auth.models import Group
 from django_filters.rest_framework import DjangoFilterBackend, FilterSet, DateFilter, CharFilter, NumberFilter
-from .serializers import UserSerializer , EventSerializer , PhotoSerializer , commentSerializer, likedPhotoSerializer, downloadedPhotoSerializer, viewedPhotoSerializer
+from .serializers import UserSerializer , EventSerializer , PhotoSerializer , commentSerializer, likedPhotoSerializer
+from .serializers import RegisterSerializer , downloadedPhotoSerializer, viewedPhotoSerializer
+
 import hashlib
+
 from rest_framework_simplejwt.tokens import RefreshToken
 
 from guardian.shortcuts import get_objects_for_user
@@ -26,21 +29,27 @@ from events.models import Events
 # Use your actual users model
 User = get_user_model()
 
+from rest_framework.permissions import BasePermission
+
 class CreateOnlyPermission(BasePermission):
     """
-    Allow POST for create and allow the 'login' action without auth.
-    Require authentication for all other methods/actions.
+    Allow:
+    - POST /users/ (registration)
+    - POST /users/login/ (login)
+
+    Require authentication for everything else.
     """
+
     def has_permission(self, request, view):
-        # allow create (POST to /users/) without auth
-        if request.method == 'POST' and view.action in [None, 'create']:
+        # Allow unauthenticated create
+        if request.method == "POST" and getattr(view, "action", None) == "create":
             return True
 
-        # allow login endpoint without auth
-        if view.action == 'login':
+        # Allow unauthenticated login
+        if getattr(view, "action", None) == "login":
             return True
 
-        # otherwise require authenticated user
+        # Otherwise require auth
         return bool(request.user and request.user.is_authenticated)
 
 
@@ -63,6 +72,11 @@ class UserViewSet(viewsets.ModelViewSet):
     ordering = ["username"]
 
 
+    def get_serializer_class(self):
+        if self.action == "create":
+            return RegisterSerializer
+        return UserSerializer
+
     def perform_create(self, serializer):
         # Save the user first (all validations, constraints still apply)
         user = serializer.save()
@@ -71,8 +85,8 @@ class UserViewSet(viewsets.ModelViewSet):
         public_group, created = Group.objects.get_or_create(name='Public')
         user.groups.add(public_group)
 
-    @action(detail=False, methods=["post"])
-    def login(self, request):
+    @action(detail=False, methods=["post"] , authentication_classes=[] )
+    def login(self, request):   
         # 1) Get email + password
         email = request.data.get("email")
         password = request.data.get("password")
@@ -128,7 +142,7 @@ class UserViewSet(viewsets.ModelViewSet):
             httponly=True,
             secure=False,      # 🔴 True in production (HTTPS)
             samesite="Lax",
-            max_age=15 * 60,   # 15 minutes
+            max_age=60 * 60 ,   #  15 hours
         )
 
         response.set_cookie(
@@ -137,7 +151,7 @@ class UserViewSet(viewsets.ModelViewSet):
             httponly=True,
             secure=False,      # 🔴 True in production
             samesite="Lax",
-            max_age=7 * 24 * 60 * 60,  # 7 days
+            max_age=7 * 24 * 60 ,  # 7 days
         )
 
         return response
@@ -151,7 +165,7 @@ class UserViewSet(viewsets.ModelViewSet):
 from rest_framework.decorators import api_view, permission_classes
 
 @api_view(["POST"])
-@permission_classes([IsAuthenticated])
+@permission_classes([AllowAny()])
 def logout(request):
     response = Response(
         {"detail": "Logged out successfully"},
@@ -183,6 +197,16 @@ class UserGroupViewSet(viewsets.ModelViewSet):
 
 
 
+from  .utils import CreateEventPerms
+from .permissions import  CanSendInvitation , CanEditEvent , CanViewEvent
+from events.models import EventInvite
+from KeepEvents.settings import FRONTEND_URL
+from guardian.shortcuts import get_users_with_perms , get_objects_for_user , remove_perm
+from django.shortcuts import get_object_or_404
+from guardian.models import UserObjectPermission
+
+from django.db.models import IntegerField
+from django.db.models.functions import Cast
 
 class EventViewSet(viewsets.ModelViewSet):
     queryset = Events.objects.all()
@@ -204,46 +228,117 @@ class EventViewSet(viewsets.ModelViewSet):
     ordering_fields = ["eventname", "eventdate", "eventtime", "eventlocation"]
     ordering = ["eventdate", "eventname", "eventtime", "eventlocation"]
 
+
+
+
     def get_queryset(self):
         user = self.request.user
-        if user.is_authenticated and (user.is_staff or user.groups.filter(name="Admin").exists()):
-            return Events.objects.all()
+
         return get_objects_for_user(
             user=user,
-            perms="view_event_obj",
+            perms="events.view_event_obj",
             klass=Events,
-            any_perm=True,
             with_superuser=True,
         )
+    
+    @action(detail=True, methods=['get'] , permission_classes=[CanEditEvent(), IsAuthenticated()])
+    def viewers(self, request, eventid=None):
+        """Get users with view_event permission on this event"""
+        event = self.get_object()
+        viewers = get_users_with_perms(event, only_with_perms_in=['view_event_obj'])
+        serializer = UserSerializer(viewers, many=True)
+        return Response(serializer.data)
+    
+    @action(detail=True, methods=['get'] , permission_classes=[CanEditEvent(), IsAuthenticated()])
+    def editors(self, request, eventid=None):
+        """Get users with edit_event permission on this event"""
+        event = self.get_object()
+        editors = get_users_with_perms(event, only_with_perms_in=['change_event_obj'])
+        serializer = UserSerializer(editors, many=True)
+        return Response(serializer.data)
+    # views.py - Fix your remove actions:
+    @action(detail=True, methods=['delete'] , permission_classes=[CanEditEvent(), IsAuthenticated()])
+    def remove_viewer(self, request, eventid=None ):
+        event = self.get_object()
+        userid = request.query_params.get('userid')  # ✅ From query params
+        user = get_object_or_404(get_user_model(), userid=userid)
+        remove_perm('view_event_obj', user, event)
+        return Response({"message": "Viewer removed"})
+
+    @action(detail=True, methods=['delete'] , permission_classes=[CanEditEvent(), IsAuthenticated()]) 
+    def remove_editor(self, request, eventid=None):
+        event = self.get_object()
+        userid = request.query_params.get('userid')
+        user = get_object_or_404(get_user_model(), userid=userid)
+        remove_perm('change_event_obj', user, event)
+        return Response({"message": "Editor removed"})
+
+    
+    @action(
+        detail=True,
+        methods=["post"],
+        permission_classes=[IsAuthenticated(), CanSendInvitation()],
+    )
+    def invite(self, request, eventid=None):
+        
+        event = self.get_object()
+
+        role = request.data.get("role")
+        expires_at = request.data.get("expires_at")
+
+        if role not in ["viewer", "editor"]:
+            return Response({"error": "Invalid role"}, status=400)
+
+        invite = EventInvite.objects.create(
+            event=event,
+            role=role,
+            expires_at=expires_at,
+        )
+
+        invite_url = f"{FRONTEND_URL}/invite/{invite.token}"
+
+        return Response({
+            "invite_url": invite_url,
+            "role": role,
+        })
+    
 
     def get_permissions(self):
         if self.action in ["list", "retrieve"]:
-            return [AllowAny()]
+            return [CanViewEvent(),IsAuthenticated() ]
         if self.action == "create":
             # only Admin or IMG Member may create events
-            return [IsAuthenticated()]
+            return [IsAuthenticated() ]
         # update/delete: owner or admin
-        return [IsAuthenticated(), IsEventOwnerOrAdmin()]
+        if self.action in ["update", "partial_update"]:
+            return [IsAuthenticated(), CanEditEvent()]
+        # delete: owner or admin
+        if self.action == "destroy":
+            return [IsAuthenticated(), CanEditEvent()]  
+        return [IsAuthenticated()]
 
     def perform_create(self, serializer):
         user = self.request.user
-        if not (is_admin(user) or is_img_member(user)):
-            # block non-admin, non-IMG member at runtime
-            from rest_framework.exceptions import PermissionDenied
-            raise PermissionDenied("Only Admin or IMG Member can create events.")
-        visibility = serializer.validated_data.get("visibility", "public")
+        visibility = serializer.validated_data.get("visibility", "private")
         event = serializer.save(eventCreator=user)
-        extra_users = self.request.data.get("extra_users", [])
-        set_event_perms(event, visibility, extra_user_ids=extra_users)
+        CreateEventPerms(event, visibility, user)
 
     def perform_update(self, serializer):
         visibility = self.request.data.get("visibility", None)
         event = serializer.save()
-        if visibility is not None:
+        if visibility is not None:  
             extra_users = self.request.data.get("extra_users", [])
             set_event_perms(event, visibility, extra_user_ids=extra_users)
 
-      
+
+from rest_framework.views import APIView
+from .utils import accept_invite
+class AcceptInviteView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request, token):
+        return accept_invite(request, token)
+
     
 
 class PhotoFilter(FilterSet):
@@ -283,6 +378,7 @@ class PhotoFilter(FilterSet):
 
 
 
+from .permissions import canViewPhoto , canEditPhoto , canDeletePhoto , canAddPhoto
 class PhotoViewSet(viewsets.ModelViewSet):
     """
     Photo viewset with:
@@ -317,14 +413,28 @@ class PhotoViewSet(viewsets.ModelViewSet):
         context = super().get_serializer_context()
         context["request"] = self.request
         return context
+    
+    def get_queryset(self):
+        user = self.request.user
+
+        # 1. Get events user can view
+        allowed_events = get_objects_for_user(
+            user,
+            "events.view_event_obj",
+            Events,
+        )
+
+        # 2. Return only photos belonging to those events
+        return Photo.objects.filter(event__in=allowed_events)
+
 
     # Permissions per action
     def get_permissions(self):
         if self.action in ["list", "retrieve"]:
-            return [IsAuthenticated()]
+            return [IsAuthenticated() , canViewPhoto() ]
 
         if self.action in ["create", "update", "partial_update", "destroy"]:
-            return [IsAuthenticated(), IsPhotoOwnerEventOwnerOrAdmin()]
+            return [IsAuthenticated(), canEditPhoto()]
 
         if self.action in ["bulk_create", "bulk_delete", "toggle_like"]:
             return [IsAuthenticated()]
@@ -333,7 +443,7 @@ class PhotoViewSet(viewsets.ModelViewSet):
 
     # Single create
     def perform_create(self, serializer):
-        permission_classes = [IsAuthenticated , IsAdmin , IsIMGMember]
+        permission_classes = [IsAuthenticated , canAddPhoto]
         serializer.save(uploadedBy=self.request.user)
 
     # -------------------------
@@ -341,7 +451,7 @@ class PhotoViewSet(viewsets.ModelViewSet):
     # -------------------------
     @action(detail=False, methods=["post"], url_path="bulk-create")
     def bulk_create(self, request):
-        permission_classes = [IsAuthenticated , IsAdmin , IsIMGMember]
+        permission_classes = [IsAuthenticated , canAddPhoto ]
         files = request.FILES.getlist("photoFile")
         descs = request.data.getlist("photoDesc")
         event_ids = request.data.getlist("event_id")
@@ -397,7 +507,7 @@ class PhotoViewSet(viewsets.ModelViewSet):
         deleted = []
         skipped = []
 
-        perm_checker = IsPhotoOwnerEventOwnerOrAdmin()
+        perm_checker = canDeletePhoto()
 
         for photo in photos:
             if perm_checker.has_object_permission(request, self, photo):

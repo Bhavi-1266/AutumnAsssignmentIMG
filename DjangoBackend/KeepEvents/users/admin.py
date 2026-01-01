@@ -55,3 +55,36 @@ class UsersAdmin(UserAdmin):
             return mark_safe(f'<img src="{obj.userProfile.url}" style="height:60px;border-radius:4px;" />')
         return "-"
     thumbnail.short_description = 'Profile'
+
+
+from django.contrib import admin
+from guardian.models import UserObjectPermission, GroupObjectPermission
+
+@admin.register(UserObjectPermission)
+class UserObjectPermissionAdmin(admin.ModelAdmin):
+    list_display = (
+        "user",
+        "permission",
+        "content_type",
+        "object_pk",
+    )
+    search_fields = (
+        "user__username",
+        "permission__codename",
+    )
+    list_filter = ("content_type",)
+
+
+@admin.register(GroupObjectPermission)
+class GroupObjectPermissionAdmin(admin.ModelAdmin):
+    list_display = (
+        "group",
+        "permission",
+        "content_type",
+        "object_pk",
+    )
+    search_fields = (
+        "group__name",
+        "permission__codename",
+    )
+    list_filter = ("content_type",)
