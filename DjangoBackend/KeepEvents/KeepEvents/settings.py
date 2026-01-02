@@ -128,14 +128,15 @@ WSGI_APPLICATION = "KeepEvents.wsgi.application"
 
 DATABASES = {
     "default": {
-        "ENGINE": "django.db.backends.postgresql_psycopg2",  # PostgreSQL database
-        "NAME": "AutumnAssDjango",     # Database name
-        "USER": "postgres",            # Database user
-        "PASSWORD": "Bhavy@1266",      # Database password (should be in env variable)
-        "HOST": "localhost",           # Database host
-        "PORT": "5433",                # Database port
+        "ENGINE": "django.db.backends.postgresql",
+        "NAME": "autumndjango",
+        "USER": "autumndbuser",
+        "PASSWORD": "strongpassword",
+        "HOST": "localhost",
+        "PORT": "5432",
     }
 }
+
 
 
 # ==============================================================================

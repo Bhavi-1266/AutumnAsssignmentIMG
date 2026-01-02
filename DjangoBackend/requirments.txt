@@ -1,0 +1,27 @@
+# Core Django
+Django>=5.0
+
+# Django REST Framework
+djangorestframework
+
+# PostgreSQL
+psycopg2-binary
+
+# Authentication / Authorization
+django-allauth
+django-guardian
+
+# JWT Authentication
+djangorestframework-simplejwt
+
+# CORS
+django-cors-headers
+
+# Image handling (photos, EXIF, thumbnails)
+Pillow
+
+# HTTP requests (Omniport OAuth)
+requests
+
+# Environment / config handling
+python-dotenv

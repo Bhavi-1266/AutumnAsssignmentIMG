@@ -248,11 +248,14 @@ class likedPhotoSerializer(serializers.ModelSerializer):
 
 class commentSerializer(serializers.ModelSerializer):
     user = UserForLikesCommentsSerializer(read_only=True)
-    photo = PhotoForLikesCommentsSerializer( read_only=True)
+    photo = PhotoForLikesCommentsSerializer(read_only=True)
+    photo_id = serializers.IntegerField(write_only=True)  # Add this line
+    
     class Meta:
         model = comment
         fields = '__all__'
         read_only_fields = ['user', 'photo']
+    
 
 class downloadedPhotoSerializer(serializers.ModelSerializer):
     class Meta:

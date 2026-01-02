@@ -176,9 +176,17 @@
       setCommentError("");
 
       try {
-        const created = await addComment(newComment.trim(), photo.photoid);
-        setComments((prev) => [created, ...prev]);
+        console.log(photo.photoid);
+        const  Comment  = await addComment(newComment.trim(), photo.photoid);
+        
+        if (!Comment) {
+          throw new Error("Failed to add comment. Please try again.");
+        }
+        else{
+          
+        setComments((prev) => [Comment, ...prev]);
         setNewComment("");
+        }
       } catch (err: any) {
         console.error("Error adding comment:", err);
         setCommentError(err.message || "Failed to add comment. Please try again.");

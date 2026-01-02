@@ -629,6 +629,7 @@ class LikedPhotoViewSet(viewsets.ModelViewSet):
     permission_classes = [IsAuthenticated]  # keep or change as needed
 
 # -------- Comment viewset --------
+from django.core.exceptions import ValidationError
 class CommentViewSet(viewsets.ModelViewSet):
     queryset = comment.objects.all().select_related('user', 'photo')
     serializer_class = commentSerializer
@@ -642,8 +643,13 @@ class CommentViewSet(viewsets.ModelViewSet):
     
     permission_classes = [IsAuthenticated]  # keep or change as needed
     def perform_create(self, serializer):
-        # automatically set the user to the authenticated user
+        photo_id = self.request.data.get('photo_id')
+        if not photo_id:  # Only raise if photo is actually missing
+            raise ValidationError({"photo": "This field is required."})
+        
+        # Continue with save
         serializer.save(user=self.request.user)
+
 
 
 
