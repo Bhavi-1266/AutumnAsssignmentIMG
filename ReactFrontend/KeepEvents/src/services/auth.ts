@@ -10,17 +10,16 @@ export async function login(userEmail: string, password: string) {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
+      "Accept": "application/json",
     },
-    credentials: "include", // for jwt tokens 
     body: JSON.stringify(body),
   });
 
   if (!response.ok) {
+    logout();
     throw new Error("Invalid userEmail or password");
   }
-  console.log(response);
   return response.json();
-  
 }
 
 export async function logout() {
@@ -30,6 +29,7 @@ export async function logout() {
   });
 
   if (!response.ok) {
+
     throw new Error("Logout failed");
   }
 
@@ -39,7 +39,6 @@ export async function logout() {
 
 
 export async function register(userEmail: string, password: string , name: string) {
-
   const body = {
     email: userEmail,
     username : name,
@@ -55,11 +54,6 @@ export async function register(userEmail: string, password: string , name: strin
     body: JSON.stringify(body), 
   });
 
-  // if (!response.ok) {
-  //   throw new Error("Registration failed");
-   
-  // }
-  console.log(response);
   return response.json();
 }
 
@@ -68,7 +62,7 @@ export async function resendOTP(userEmail: string) {
   const body = {
     email: userEmail,
   }
-  const response = await fetch(`/auth/request-otp/`, {
+  const response = await fetch(`/api/auth/request-otp/`, {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
@@ -88,7 +82,7 @@ export async function verifyOTP(userEmail: string, otp: string) {
     email: userEmail,
     code : otp,
   }
-  const response = await fetch(`/auth/verify-otp/`, {
+  const response = await fetch(`/api/auth/verify-otp/`, {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
@@ -117,3 +111,7 @@ export async function getMe() {
 }
 
 
+
+export async function checkAuth() {
+  
+}

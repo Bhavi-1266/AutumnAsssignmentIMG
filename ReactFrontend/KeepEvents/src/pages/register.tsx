@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { register, resendOTP, verifyOTP } from "../services/auth";
+import {toast} from "react-hot-toast"
 
 function Register() {
   const navigate = useNavigate();
@@ -68,6 +69,7 @@ function Register() {
     verifyOTP(userEmail, otp)
       .then((data) => {
         navigate("/HomePage");
+        toast.success("Registration successful");
       })
       .catch((err) => {
         console.log(err);

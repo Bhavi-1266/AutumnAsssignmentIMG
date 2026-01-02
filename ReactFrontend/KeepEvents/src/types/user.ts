@@ -20,11 +20,34 @@ export interface User {
 }
 
 export type EditedData = Partial<{
-  first_name: string;
-  last_name: string;
   userbio: string | null;
   enrollmentNo: number | null;
   dept: string | null;
   batch: number | null;
 }>;
-  
+
+
+
+export interface UserActivitySummary {
+  user: {
+    username: string;
+    email: string;
+  };
+  stats: {
+    total_photos: number;
+    total_likes: number;
+    total_views: number;
+    total_downloads: number;
+    total_comments: number;
+    first_upload_date: string | null;
+  };
+  activity: {
+    top_tags: { tag: string; count: number }[];
+    top_locations: { location: string; count: number }[];
+    major_events: {
+      event__eventid: number;
+      event__eventname: string;
+      photo_count: number;
+    }[];
+  };
+}

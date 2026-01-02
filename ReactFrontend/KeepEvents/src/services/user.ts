@@ -40,3 +40,15 @@ export async function patchUserProfileImage(
   return response.json();
 }
 
+
+export async function getMyClicksStats() {
+  const response = await fetch(`/api/users/me/activity-summary/`, {
+    method: "GET",
+    credentials: "include",
+  });
+  if (!response.ok) {
+    throw new Error("Failed to fetch user activity summary");
+    console.log(response);
+  }
+  return response.json();
+}

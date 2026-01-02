@@ -154,6 +154,7 @@ function CreateEvent() {
           <option value="public">Public</option>
           <option value="img">IMG</option>
           <option value="admin">Admin</option>
+          <option value="private">Private</option>
         </select>
 
         <button

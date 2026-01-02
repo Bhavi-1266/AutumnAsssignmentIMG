@@ -11,7 +11,7 @@ import MyActivityPage from "./pages/MyActivityPage";
 import MyInfoPage from "./pages/MyInfoPage";
 import EventsPage from "./pages/EventsPage";
 import PhotosPage from "./pages/PhotosPage";
-
+import AcceptInvite from "./pages/AcceptInvite";
 function App() {
   return (
     <>
@@ -28,6 +28,7 @@ function App() {
         <Route path="/Profile" element={<MyInfoPage />} />
         <Route path="/Events" element={<EventsPage />} />
         <Route path="/Photos" element={<PhotosPage />} />
+        <Route path="/invite/:token" element={<AcceptInvite />} />
       </Routes>
     </>
   );

@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { login } from "../services/auth";
+import {toast} from "react-hot-toast"
 
 function Login() {
   const navigate = useNavigate();
@@ -14,6 +15,7 @@ function Login() {
     try {
       const data = await login(userEmail, password);
       navigate("/HomePage");
+      toast.success("Login successful");
     } catch (err) {
       setError("Invalid credentials");
     }

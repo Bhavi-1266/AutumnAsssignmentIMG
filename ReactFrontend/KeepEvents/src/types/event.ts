@@ -1,6 +1,6 @@
 import type { User } from "./user";
 
-export type EventVisibility = "public" | "admin" | "img";
+export type EventVisibility = "public" | "admin" | "img" | "private";
 
 export interface Event {
   eventid: number;
@@ -17,4 +17,6 @@ export interface Event {
   eventCreator_detail: User;
 
   visibility: EventVisibility;
+  myrole : string;
 }
+  

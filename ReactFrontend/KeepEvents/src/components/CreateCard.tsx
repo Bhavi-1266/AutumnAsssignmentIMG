@@ -15,7 +15,7 @@ function CreateCard({ ToCreate, onClick }: CreateCardProps) {
 
     <div
       onClick={onClick}
-      className="flex flex-col justify-center  rouded-lg .h-full  border border-gray-300 shadow-md hover:shadow-lg cursor-pointer transition-shadow duration-200"
+      className="flex flex-col justify-center   max-w-sm  rouded-lg .h-full  border border-gray-300 shadow-md hover:shadow-lg cursor-pointer transition-shadow duration-200"
     >
       {/* Cover Image */}
       <div className="">
@@ -23,7 +23,7 @@ function CreateCard({ ToCreate, onClick }: CreateCardProps) {
           <img
             src={"../../src/assets/add.png"} 
             alt={"Add"+ToCreate}
-            className="  h-28 opacity-70 w-full object-contain  "
+            className=" my-4 h-28 opacity-70 w-full object-contain  "
           />
         } 
       </div>

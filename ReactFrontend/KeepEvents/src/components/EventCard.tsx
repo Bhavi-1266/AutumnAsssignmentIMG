@@ -2,7 +2,6 @@ import type { Event } from "../types/event";
 
 interface EventCardProps {
   event: Event;
-  totalPhotos: number;
   onClick?: () => void;
 }
 
